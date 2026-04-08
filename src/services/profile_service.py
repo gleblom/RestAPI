@@ -28,7 +28,16 @@ async def add_profile_service(db: Annotated[AsyncSession, Depends(get_session)],
 async def update_profile_service(db: Annotated[AsyncSession, Depends(get_session)], profile: Profile):
     try:
         
-        updated_profile = await ProfileRepository.update_profile({"first_name": profile.first_name}, profile, db)
+        updated_profile = await ProfileRepository.update_profile(
+            {
+             "first_name": profile.first_name,
+             "second_name": profile.second_name,
+             "third_name": profile.third_name,
+             "role_id": profile.role_id,
+             "unit_id": profile.unit_id
+             }, 
+            profile, db)
+        
         await db.commit()
         
         return updated_profile

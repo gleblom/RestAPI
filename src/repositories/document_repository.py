@@ -20,16 +20,16 @@ class DocumentRepository:
         return document
     
     @staticmethod
-    async def get_document_by_user(user_id: UUID, db: AsyncSession):
+    async def get_documents_by_user(user_id: UUID, db: AsyncSession):
         result = await db.execute(select(Document).where(Document.author_id == user_id))
         
         return result.all()
     
     @staticmethod
-    async def get_document_id(document_id: UUID, db: AsyncSession):
+    async def get_document_id(document_id: UUID, db: AsyncSession) -> Document | None:
         result = await db.execute(select(Document).where(Document.id == document_id))
         
-        return result.all()
+        return result.scalar_one_or_none()
     
     @staticmethod
     async def get_public_documents_by_unit(unit_id: int, db: AsyncSession):

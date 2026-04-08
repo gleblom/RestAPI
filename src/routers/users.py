@@ -20,7 +20,7 @@ router = APIRouter(
     tags=["users"],
 )
 
-role_checker = RoleChecker([1, 2]) #id базовых ролей: 1 - Директор, 2 - Админ
+role_checker = RoleChecker([1, 2]) #id базовых ролей: 1 - Директор, 2 - Админ 3 - Делопроизводитель
 
 @router.put("/company")
 async def update_user_company(db: Annotated[AsyncSession, Depends(get_session)], company: UserUpdateDTO):
@@ -45,12 +45,11 @@ async def create_profile(
     current_user: CurrentUser, 
     profile: Profile,
     ):
-    try:
-        
-        created_profile = await add_profile_service(db, profile)
-        
-        return created_profile
-    
+    try:   
+        if current_user.company_id == profile.company_id:
+            created_profile = await add_profile_service(db, profile)
+            return created_profile
+   
     except AlreadyExists as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     except SQLAlchemyError as e:

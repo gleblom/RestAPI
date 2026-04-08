@@ -8,9 +8,8 @@ from pydantic import BaseModel, ConfigDict
 class DocumentCreateDTO(BaseModel):
     title: str
     category_id: int
-    route_id: int
     unit_id: int
-    expires_at: datetime
+    expires_at: Optional[datetime] = None
     
 class DocumentReadDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -29,8 +28,11 @@ class DocumentReadDTO(BaseModel):
     updated_at: datetime
 
 class DocumentUpdateDTO(BaseModel):
+    id: UUID
+    route_id: Optional[int] = None
+    status_id: Optional[int] = None
+    current_step_index: Optional[int] = None
     title: Optional[str] = None
-    expires_at: Optional[datetime] = None
 
 class DocumentVersionCreateDTO(BaseModel):
     document_id: UUID

@@ -44,7 +44,6 @@ htmlcov/
 # Translation files
 *.mo
 *.pot
-
 # Alembic / migrations: typically tracked, don't ignore by default
 
 # Database files

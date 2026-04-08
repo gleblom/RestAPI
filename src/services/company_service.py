@@ -6,9 +6,11 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session
-from exceptions import AlreadyExists
+from exceptions import AlreadyExists, NotFound
 from models.dictionaries import Company
 from repositories.company_repository import CompanyRepository
+from schemas.dictionaries import CompanyUpdateDTO
+from security import CurrentUser
 
 async def add_company_service(
     db: Annotated[AsyncSession, Depends(get_session)], 
@@ -35,3 +37,30 @@ async def add_company_service(
     except Exception as e:
         await db.rollback()
         raise e
+
+async def update_company_service(
+    db: Annotated[AsyncSession, Depends(get_session)], 
+    current_user: CurrentUser, 
+    company_id: UUID,
+    company_name: str):
+    
+    company = await CompanyRepository.get_company(company_id, db)
+    
+    if not company:
+        raise NotFound()
+    
+    if company.director_id != current_user.company_id:
+        raise 
+    try:
+        updated_company = await CompanyRepository.update_company({"company_name": company_name}, company, db)
+        
+        await db.commit()
+        
+        return updated_company
+
+    except Exception as e:
+        await db.rollback()
+        raise e
+    
+    
+    
