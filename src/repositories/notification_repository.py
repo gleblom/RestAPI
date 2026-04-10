@@ -18,7 +18,7 @@ class NotificationRepository:
         return notification
     
     @staticmethod
-    async def get_notification_by_id(notification: int, db: AsyncSession):
+    async def get_notifications_by_id(notification: int, db: AsyncSession):
         result = await db.execute(select(Notification).where(Notification.id == notification))
         
         return result.scalar_one_or_none();

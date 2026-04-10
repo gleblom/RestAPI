@@ -11,7 +11,7 @@ class ApprovalRoute(Base):
 
     created_by: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
     
-    company_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("company.id"))
+    company_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id"))
 
     creator = relationship("User", back_populates="created_routes")
     company = relationship("Company", back_populates="routes")

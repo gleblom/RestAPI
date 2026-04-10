@@ -17,10 +17,10 @@ class Document(Base):
     updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     expires_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    route_id: Mapped[int] = mapped_column(Integer, ForeignKey("approval_routes.id"))
+    route_id: Mapped[int] = mapped_column(Integer, ForeignKey("approval_routes.id"), nullable=True)
     category_id: Mapped[int] = mapped_column(Integer, ForeignKey("categories.id"))
     status_id: Mapped[int] = mapped_column(Integer, ForeignKey("statuses.id"))
-    doc_unit_id: Mapped[int] = mapped_column(Integer, ForeignKey("document_units.id"))
+    doc_unit_id: Mapped[int] = mapped_column(Integer, ForeignKey("document_units.id"), nullable=True)
     author_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
 
     route = relationship("ApprovalRoute", back_populates="documents")
@@ -47,7 +47,7 @@ class DocumentUnit(Base):
     document_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
     unit_id: Mapped[int] = mapped_column(Integer, ForeignKey("units.id", ondelete="CASCADE"), nullable=False)
 
-    document = relationship("Document", back_populates="units")
+    document = relationship("Document", back_populates="document_units")
     unit = relationship("Unit", back_populates="document_units")
 
     __table_args__ = (
@@ -64,7 +64,12 @@ class DocumentVersion(Base):
     document_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
 
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    url: Mapped[str] = mapped_column(String, nullable=False)
+
+    storage_object_name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+
+    original_file_name: Mapped[str] = mapped_column(String, nullable=False)
+    mime_type: Mapped[str] = mapped_column(String, nullable=False, default="application/pdf")
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
@@ -89,8 +94,8 @@ class DocumentApproval(Base):
     approver_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     step_index: Mapped[int] = mapped_column(Integer, nullable=False)
-    is_approved: Mapped[bool] = mapped_column(Boolean)
-    comment: Mapped[str] = mapped_column(String)
+    is_approved: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    comment: Mapped[str] = mapped_column(String, nullable=True)
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 

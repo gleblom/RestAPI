@@ -20,6 +20,12 @@ class Config(BaseSettings):
    
    refresh_token_expire_days: int = 30
    
+   minio_endpoint: str = Field(..., alias="minio_endpoint")
+   minio_bucket: str = Field(..., alias="bucket")
+   minio_access_key: SecretStr = Field(..., alias = "minio_access_key")
+   minio_secret_key: SecretStr = Field(..., alias = "minio_secret_key")
+   minio_secure: bool = Field(..., alias="secure")
+   
    model_config = SettingsConfigDict(
         env_file="src/settings/.env",
         env_file_encoding="utf-8",

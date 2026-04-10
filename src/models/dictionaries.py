@@ -7,13 +7,13 @@ from src.database import Base
 
 class Role(Base):
     __tablename__ = "roles"
-    
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     company_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=True)
-    
+
     profiles = relationship("Profile", back_populates="role")
-    role_category = relationship("RoleCategory", back_populates="role", cascade="all, delete-orphan")
+    role_categories = relationship("RoleCategory", back_populates="role", cascade="all, delete-orphan")
     company = relationship("Company", back_populates="roles")
     
     def __repr__(self): 

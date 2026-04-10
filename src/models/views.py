@@ -37,7 +37,6 @@ class MVDocument(Base):
 
     latest_version_id: Mapped[int] = mapped_column(Integer)
     latest_version_number: Mapped[int] = mapped_column(Integer)
-    latest_version_url : Mapped[str] = mapped_column(String)
 
 
     def __repr__(self):
@@ -91,7 +90,12 @@ class MVDocumentVersion(Base):
     title : Mapped[str] = mapped_column(String)
 
     version_number: Mapped[int] = mapped_column(Integer)
-    url : Mapped[str] = mapped_column(String)
+
+    storage_object_name: Mapped[str] = mapped_column(String)
+
+    original_file_name: Mapped[str] = mapped_column(String)
+    mime_type: Mapped[str] = mapped_column(String)
+    file_size: Mapped[int] = mapped_column(Integer)
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True))
 
