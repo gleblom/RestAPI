@@ -206,7 +206,7 @@ async def send_email_confirmation_service(email: str, db: Annotated[AsyncSession
 
     confirm_token_value = await create_token_service(email, "verification",db)
 
-    confirmation_link = f"http://{settings.domain}/api/auth/confirm-email?token={confirm_token_value}"
+    confirmation_link = f"https://{settings.domain}/api/auth/confirm-email?token={confirm_token_value}"
     
     try:
         result = resend.Emails.send({
