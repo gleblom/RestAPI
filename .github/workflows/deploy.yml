@@ -15,8 +15,15 @@ jobs:
       - name: Install CapRover CLI
         run: npm install -g caprover
     
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - name: Prepare deployment archive
+        run: |
+          tar --exclude='.git' \
+              --exclude='.env' \
+              --exclude='__pycache__' \
+              --exclude='*.pyc' \
+              --exclude='.pytest_cache' \
+              --exclude='.mypy_cache' \
+              -cvf deploy.tar .
 
       - name: Deploy to CapRover
         uses: caprover/deploy-from-github@v1.1.2
