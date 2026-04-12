@@ -12,4 +12,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 
-CMD ["uvicorn", "src.main:app", "--host", "fastapi.documentmanagementservice.ru", "--port", "8000"]
+CMD ["uvicorn", "src.main:app", "--host", "documentmanagementservice.ru", "--port", "8000"]
