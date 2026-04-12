@@ -15,7 +15,6 @@ debugpy==1.8.20
 ecdsa==0.19.2
 eralchemy2==1.4.1
 fastapi==0.135.2
-greenlet==3.3.2
 h11==0.16.0
 idna==3.11
 itsdangerous==2.2.0
