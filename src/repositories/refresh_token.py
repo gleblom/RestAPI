@@ -1,13 +1,11 @@
 
 from datetime import UTC, datetime
-from typing import Annotated, cast
+from typing import cast
 
-from fastapi import Depends
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database import get_session
 
 from src.models.users import RefreshToken
 
