@@ -3,8 +3,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_session
-from schemas.routes import (
+from src.database import get_session
+from src.schemas.routes import (
     ApprovalRouteCreateDTO,
     ApprovalRouteReadDTO,
     ApprovalRouteUpdateDTO,

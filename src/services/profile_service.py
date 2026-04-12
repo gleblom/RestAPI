@@ -5,12 +5,13 @@ from fastapi import Depends, HTTPException
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_session
-from exceptions import AlreadyExists
-from models.users import Profile
-from repositories.profile_repository import ProfileRepository
+from src.schemas.users import ProfileDTO
+from src.database import get_session
+from src.exceptions import AlreadyExists
+from src.models.users import Profile
+from src.repositories.profile_repository import ProfileRepository
 
-async def add_profile_service(db: Annotated[AsyncSession, Depends(get_session)], profile: Profile):
+async def add_profile_service(db: Annotated[AsyncSession, Depends(get_session)], profile: ProfileDTO):
     user_profile = await ProfileRepository.get_profile_by_id(cast(UUID, profile.id), db)
     
     if user_profile:
@@ -25,7 +26,7 @@ async def add_profile_service(db: Annotated[AsyncSession, Depends(get_session)],
         await db.rollback()
         raise e
     
-async def update_profile_service(db: Annotated[AsyncSession, Depends(get_session)], profile: Profile):
+async def update_profile_service(db: Annotated[AsyncSession, Depends(get_session)], profile:ProfileDTO):
     try:
         
         updated_profile = await ProfileRepository.update_profile(

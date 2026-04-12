@@ -7,7 +7,7 @@ from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_session
+from src.database import get_session
 
 from src.models.users import RefreshToken
 

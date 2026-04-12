@@ -6,9 +6,9 @@ from fastapi import HTTPException, UploadFile, status
 from minio.error import S3Error
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repositories.document_repository import DocumentRepository
-from services.document_file_service import ensure_pdf_file
-from storage.minio_client import MINIO_BUCKET, minio_client
+from src.repositories.document_repository import DocumentRepository
+from src.services.document_file_service import ensure_pdf_file
+from src.storage.minio_client import MINIO_BUCKET, minio_client
 
 
 async def upload_document_version_to_storage(

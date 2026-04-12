@@ -6,8 +6,8 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from models.dictionaries import Role, Unit, UnitCompany
-from models.users import Profile
+from src.models.dictionaries import Role, Unit, UnitCompany
+from src.models.users import Profile
 
 
 class DictionariesRepository:

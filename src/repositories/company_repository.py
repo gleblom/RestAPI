@@ -2,7 +2,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from models.dictionaries import Company
+from src.models.dictionaries import Company
 
 from sqlalchemy.ext.asyncio import AsyncSession
 

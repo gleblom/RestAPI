@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+
 from fastapi import HTTPException, UploadFile, status
 
 PDF_MIME = "application/pdf"

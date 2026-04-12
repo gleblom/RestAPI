@@ -7,15 +7,15 @@ from fastapi import Body, Depends, HTTPException
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_session
-from exceptions import AccountNotVerified, AlreadyExists, Authentication, InvalidToken, NotActiveUser, NotFound
-from models.users import RefreshToken, User, UserToken
-from repositories.profile_repository import ProfileRepository
-from repositories.refresh_token import RefreshTokenRepository
-from repositories.user_repository import UserRepository
-from repositories.user_token import UserTokenRepository
-from schemas.email import EmailResponseDTO
-from security import (
+from src.database import get_session
+from src.exceptions import AccountNotVerified, AlreadyExists, Authentication, InvalidToken, NotActiveUser, NotFound
+from src.models.users import RefreshToken, User, UserToken
+from src.repositories.profile_repository import ProfileRepository
+from src.repositories.refresh_token import RefreshTokenRepository
+from src.repositories.user_repository import UserRepository
+from src.repositories.user_token import UserTokenRepository
+from src.schemas.email import EmailResponseDTO
+from src.security import (
     create_access_token,
     create_token, 
     get_refresh_token_expire_time, 
@@ -206,7 +206,7 @@ async def send_email_confirmation_service(email: str, db: Annotated[AsyncSession
 
     confirm_token_value = await create_token_service(email, "verification",db)
 
-    confirmation_link = f"https://{settings.domain}/api/auth/confirm-email?token={confirm_token_value}"
+    confirmation_link = f"http://{settings.domain}/api/auth/confirm-email?token={confirm_token_value}"
     
     try:
         result = resend.Emails.send({

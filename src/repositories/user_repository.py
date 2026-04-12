@@ -4,8 +4,8 @@ from uuid import UUID
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.users import User
-from models.views import VUser
+from src.models.users import User
+from src.models.views import VUser
 
 
 class UserRepository:

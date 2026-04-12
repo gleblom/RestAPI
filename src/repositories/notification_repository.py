@@ -1,11 +1,11 @@
 from uuid import UUID
 
-from models.documents import Notification
+from src.models.documents import Notification
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.views import MVNotification
+from src.models.views import MVNotification
 
 class NotificationRepository:
     

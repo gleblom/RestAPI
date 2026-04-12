@@ -4,30 +4,30 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 
-class CompanyReadDTO(BaseModel):
+class CompanyReadDTO(BaseModel):# @IgnoreException
     company_name: str
     director_id: UUID
 
 
-class CompanyCreateDTO(BaseModel):
+class CompanyCreateDTO(BaseModel):# @IgnoreException
     company_name: str
     director_id: UUID
 
 
-class CompanyUpdateDTO(BaseModel):
+class CompanyUpdateDTO(BaseModel):# @IgnoreException
     company_name: str
     company_id: UUID
 
 
-class RoleCreateDTO(BaseModel):
+class RoleCreateDTO(BaseModel):# @IgnoreException
     name: str
 
 
-class RoleUpdateDTO(BaseModel):
+class RoleUpdateDTO(BaseModel):# @IgnoreException
     name: Optional[str] = None
 
 
-class RoleReadDTO(BaseModel):
+class RoleReadDTO(BaseModel):# @IgnoreException
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -35,17 +35,17 @@ class RoleReadDTO(BaseModel):
     company_id: UUID | None = None
 
 
-class UnitCreateDTO(BaseModel):
+class UnitCreateDTO(BaseModel):# @IgnoreException
     name: str
     company_ids: list[UUID] = []
 
 
-class UnitUpdateDTO(BaseModel):
+class UnitUpdateDTO(BaseModel):# @IgnoreException
     name: Optional[str] = None
     company_ids: Optional[list[UUID]] = None
 
 
-class UnitReadDTO(BaseModel):
+class UnitReadDTO(BaseModel):# @IgnoreException
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -53,6 +53,6 @@ class UnitReadDTO(BaseModel):
     company_ids: list[UUID] = []
 
 
-class UnitCompanyLinkDTO(BaseModel):
+class UnitCompanyLinkDTO(BaseModel):# @IgnoreException
     unit_id: int
     company_id: UUID

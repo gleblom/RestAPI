@@ -4,8 +4,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_session
-from schemas.dictionaries import (
+from src.database import get_session
+from src.schemas.dictionaries import (
     RoleCreateDTO,
     RoleReadDTO,
     RoleUpdateDTO,
@@ -13,8 +13,8 @@ from schemas.dictionaries import (
     UnitReadDTO,
     UnitUpdateDTO,
 )
-from security import CurrentUser, RoleChecker
-from services.dictionaries_service import (
+from src.security import CurrentUser, RoleChecker
+from src.services.dictionaries_service import (
     attach_unit_to_company_service,
     create_role_service,
     create_unit_service,

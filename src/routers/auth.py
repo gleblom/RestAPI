@@ -7,14 +7,14 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 
-from database import get_session
-from exceptions import AlreadyExists, Authentication, NotFound
-from repositories.user_repository import UserRepository
-from schemas.email import EmailRequestDTO, EmailResponseDTO
-from schemas.users import UserPublicDTO, UserTokenDTO
-from security import CurrentUser
+from src.database import get_session
+from src.exceptions import AlreadyExists, Authentication, NotFound
+from src.repositories.user_repository import UserRepository
+from src.schemas.email import EmailRequestDTO, EmailResponseDTO
+from src.schemas.users import UserPublicDTO, UserTokenDTO
+from src.security import CurrentUser
 
-from services.user_service import (
+from src.services.user_service import (
     add_user_service, 
     delete_token_service, 
     login_user_service, 

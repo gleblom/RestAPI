@@ -6,17 +6,16 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config.main import Config
-from database import get_session
-from models.dictionaries import UnitCompany
-from models.documents import Document, DocumentUnit, DocumentVersion
-from repositories.document_repository import DocumentRepository
-from schemas.documents import DocumentCreateDTO, DocumentVersionCreateDTO
-from security import CurrentUser
+from src.config.main import Config
+from src.database import get_session
+from src.models.dictionaries import UnitCompany
+from src.models.documents import Document, DocumentUnit, DocumentVersion
+from src.repositories.document_repository import DocumentRepository
+from src.schemas.documents import DocumentCreateDTO, DocumentVersionCreateDTO
+from src.security import CurrentUser
 
-from minio import Minio
 
-from services.document_storage_service import upload_document_version_to_storage
+from src.services.document_storage_service import upload_document_version_to_storage
 
 PUBLISHED_STATUS_ID = 1
 DRAFT_STATUS_ID = 2

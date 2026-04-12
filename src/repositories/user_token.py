@@ -5,7 +5,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from models.users import User, UserToken
+from src.models.users import User, UserToken
 
 from sqlalchemy.ext.asyncio import AsyncSession
 

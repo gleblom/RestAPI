@@ -6,24 +6,24 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_session
-from repositories.document_repository import DocumentRepository
-from schemas.documents import (
+from src.database import get_session
+from src.repositories.document_repository import DocumentRepository
+from src.schemas.documents import (
     DocumentCreateDTO,
     DocumentReadDTO,
     DocumentSubmitDTO,
     DocumentVersionCreateDTO,
     DocumentVersionReadDTO,
 )
-from security import CurrentUser
-from services.approval_service import approve_document_service, reject_document_service, submit_document_service
-from services.document_service import (
+from src.security import CurrentUser
+from src.services.approval_service import approve_document_service, reject_document_service, submit_document_service
+from src.services.document_service import (
     create_document_service,
     create_document_version_service,
     get_document_service,
     upload_document_version_service,
 )
-from services.document_storage_service import get_minio_object_stream, get_presigned_download_url
+from src.services.document_storage_service import get_minio_object_stream, get_presigned_download_url
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 

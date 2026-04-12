@@ -3,9 +3,9 @@ from uuid import UUID
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.documents import Document, DocumentApproval, DocumentUnit, DocumentVersion, Notification
-from models.views import MVDocument, MVDocumentApproval, MVDocumentVersion
-from repositories.notification_repository import NotificationRepository
+from src.models.documents import Document, DocumentApproval, DocumentUnit, DocumentVersion, Notification
+from src.models.views import MVDocument, MVDocumentApproval, MVDocumentVersion
+from src.repositories.notification_repository import NotificationRepository
 
 
 class DocumentRepository:

@@ -7,13 +7,13 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 
-from database import get_session
-from exceptions import AlreadyExists
-from models.users import Profile
-from schemas.users import UserUpdateDTO
-from security import CurrentUser, RoleChecker
-from services.profile_service import add_profile_service, update_profile_service
-from services.user_service import get_users_service, update_user_company_service
+from src.database import get_session
+from src.exceptions import AlreadyExists
+from src.models.users import Profile
+from src.schemas.users import ProfileDTO, UserUpdateDTO
+from src.security import CurrentUser, RoleChecker
+from src.services.profile_service import add_profile_service, update_profile_service
+from src.services.user_service import get_users_service, update_user_company_service
 
 router = APIRouter(
     prefix="/users",
@@ -39,16 +39,27 @@ async def get_users(db: Annotated[AsyncSession, Depends(get_session)], current_u
     return users
 
 #Создание профиля администратором или директором 
-@router.post("/profile", status_code=status.HTTP_201_CREATED, dependencies=[Depends(role_checker)])
+@router.post("/profile", response_model=ProfileDTO, status_code=status.HTTP_201_CREATED, dependencies=[Depends(role_checker)])
 async def create_profile(
     db: Annotated[AsyncSession, Depends(get_session)], 
     current_user: CurrentUser, 
-    profile: Profile,
+    profile: ProfileDTO,
     ):
     try:   
         if current_user.company_id == profile.company_id:
             created_profile = await add_profile_service(db, profile)
-            return created_profile
+            
+            new_profile = ProfileDTO(
+                id = created_profile.id,
+                first_name=created_profile.first_name,
+                second_name=created_profile.second_name,
+                third_name=created_profile.third_name,
+                company_id=cast(UUID, created_profile.company_id),
+                role_id=created_profile.role_id,
+                unit_id=created_profile.unit_id
+            )
+            
+            return new_profile
    
     except AlreadyExists as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -59,7 +70,7 @@ async def create_profile(
         
 
 @router.put("/profile", dependencies=[Depends(role_checker)])
-async def update_profile(db: Annotated[AsyncSession, Depends(get_session)], current_user: CurrentUser, profile: Profile):
+async def update_profile(db: Annotated[AsyncSession, Depends(get_session)], current_user: CurrentUser, profile: ProfileDTO):
     
     if current_user.company_id == profile.company_id:
         updated_profile = await update_profile_service(db, profile)

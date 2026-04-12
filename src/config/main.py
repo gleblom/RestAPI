@@ -2,7 +2,7 @@ from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Config(BaseSettings):    
+class Config(BaseSettings):    # @IgnoreException
    
    host: str = Field(..., alias="db_host")
    port: int = Field(..., alias="db_port")

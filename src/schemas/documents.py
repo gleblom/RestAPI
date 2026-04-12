@@ -5,14 +5,14 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 
-class DocumentCreateDTO(BaseModel):
+class DocumentCreateDTO(BaseModel):# @IgnoreException
     title: str
     category_id: int
     unit_id: int
     expires_at: Optional[datetime] = None
 
 
-class DocumentReadDTO(BaseModel):
+class DocumentReadDTO(BaseModel):# @IgnoreException
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -26,7 +26,7 @@ class DocumentReadDTO(BaseModel):
     updated_at: datetime
 
 
-class DocumentUpdateDTO(BaseModel):
+class DocumentUpdateDTO(BaseModel):# @IgnoreException
     id: UUID
     route_id: Optional[int] = None
     status_id: Optional[int] = None
@@ -34,14 +34,14 @@ class DocumentUpdateDTO(BaseModel):
     title: Optional[str] = None
 
 
-class DocumentVersionCreateDTO(BaseModel):
+class DocumentVersionCreateDTO(BaseModel):# @IgnoreException
 
     document_id: Optional[UUID] = None
     version_number: Optional[int] = None
     url: str
 
 
-class DocumentVersionReadDTO(BaseModel):
+class DocumentVersionReadDTO(BaseModel):# @IgnoreException
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -51,11 +51,11 @@ class DocumentVersionReadDTO(BaseModel):
     created_at: datetime
 
 
-class DocumentSubmitDTO(BaseModel):
+class DocumentSubmitDTO(BaseModel):# @IgnoreException
     route_id: int
 
 
-class NotificationReadDTO(BaseModel):
+class NotificationReadDTO(BaseModel):# @IgnoreException
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -66,11 +66,11 @@ class NotificationReadDTO(BaseModel):
     created_at: datetime
 
 
-class NotificationUpdateDTO(BaseModel):
+class NotificationUpdateDTO(BaseModel):# @IgnoreException
     is_read: bool
 
 
-class MVDocumentDTO(BaseModel):
+class MVDocumentDTO(BaseModel):# @IgnoreException
     model_config = ConfigDict(from_attributes=True)
 
     document_id: UUID
@@ -83,7 +83,7 @@ class MVDocumentDTO(BaseModel):
     created_at: datetime
 
 
-class MVNotificationDTO(BaseModel):
+class MVNotificationDTO(BaseModel):# @IgnoreException
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -95,13 +95,13 @@ class MVNotificationDTO(BaseModel):
     created_at: datetime
 
 
-class DocumentVersionUploadDTO(BaseModel):
+class DocumentVersionUploadDTO(BaseModel):# @IgnoreException
 
     document_id: UUID
     
 
 
-class DocumentFileReadDTO(BaseModel):
+class DocumentFileReadDTO(BaseModel):# @IgnoreException
     document_id: UUID
     version_id: int
     download_name: str

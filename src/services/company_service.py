@@ -5,12 +5,12 @@ from fastapi import Depends, HTTPException
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_session
-from exceptions import AlreadyExists, NotFound
-from models.dictionaries import Company
-from repositories.company_repository import CompanyRepository
-from schemas.dictionaries import CompanyUpdateDTO
-from security import CurrentUser
+from src.database import get_session
+from src.exceptions import AlreadyExists, NotFound
+from src.models.dictionaries import Company
+from src.repositories.company_repository import CompanyRepository
+from src.schemas.dictionaries import CompanyUpdateDTO
+from src.security import CurrentUser
 
 async def add_company_service(
     db: Annotated[AsyncSession, Depends(get_session)], 

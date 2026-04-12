@@ -2,8 +2,8 @@ from sqlalchemy import UUID, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from models.approval_routes import ApprovalRoute, RouteEdge, RouteNode
-from models.views import MVRoute
+from src.models.approval_routes import ApprovalRoute, RouteEdge, RouteNode
+from src.models.views import MVRoute
 
 class RouteRepository:
     

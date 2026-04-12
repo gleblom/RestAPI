@@ -6,13 +6,13 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_session
-from models.documents import DocumentApproval, Notification
-from repositories.document_repository import DocumentRepository
-from repositories.notification_repository import NotificationRepository
-from repositories.route_repository import RouteRepository
-from schemas.documents import DocumentSubmitDTO
-from security import CurrentUser
+from src.database import get_session
+from src.models.documents import DocumentApproval, Notification
+from src.repositories.document_repository import DocumentRepository
+from src.repositories.notification_repository import NotificationRepository
+from src.repositories.route_repository import RouteRepository
+from src.schemas.documents import DocumentSubmitDTO
+from src.security import CurrentUser
 
 PUBLISHED_STATUS_ID = 1
 DRAFT_STATUS_ID = 2

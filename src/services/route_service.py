@@ -8,9 +8,9 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.approval_routes import ApprovalRoute, RouteEdge, RouteNode
-from repositories.route_repository import RouteRepository
-from schemas.routes import (
+from src.models.approval_routes import ApprovalRoute, RouteEdge, RouteNode
+from src.repositories.route_repository import RouteRepository
+from src.schemas.routes import (
     ApprovalRouteCreateDTO,
     ApprovalRouteReadDTO,
     ApprovalRouteUpdateDTO,
@@ -21,7 +21,7 @@ from schemas.routes import (
     RouteNodeCreateDTO,
     RouteNodeUpdateDTO,
 )
-from security import CurrentUser
+from src.security import CurrentUser
 
 
 def _ensure_same_company(route_company_id: UUID, current_company_id: UUID) -> None:

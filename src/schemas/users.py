@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
-class UserCreateDTO(BaseModel):
+class UserCreateDTO(BaseModel): # @IgnoreException
     
     model_config = ConfigDict(from_attributes=True)
     email: EmailStr
@@ -15,20 +15,20 @@ class UserCreateDTO(BaseModel):
     phone: Optional[str] = None
     
     
-class UserPublicDTO(BaseModel):
+class UserPublicDTO(BaseModel): # @IgnoreException
     model_config = ConfigDict(from_attributes=True)
     
     id: UUID
     
     
     
-class UserTokenDTO(BaseModel):
+class UserTokenDTO(BaseModel): # @IgnoreException
     access_token: str
     token_type: str 
     refresh_token: str
     
     
-class UserReadDTO(BaseModel):
+class UserReadDTO(BaseModel): # @IgnoreException
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -38,15 +38,17 @@ class UserReadDTO(BaseModel):
     is_email_verified: bool
     created_at: datetime
 
-class UserUpdateDTO(BaseModel):
+class UserUpdateDTO(BaseModel): # @IgnoreException
     phone: Optional[str] = None
     is_active: Optional[bool] = None
     director_id: Optional[UUID] = None
     company_id: Optional[UUID] = None
 
     
-class ProfileDTO(BaseModel):
+class ProfileDTO(BaseModel): # @IgnoreException
     model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
 
     first_name: Optional[str]
     second_name: Optional[str]

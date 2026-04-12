@@ -14,10 +14,10 @@ from pwdlib import PasswordHash
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_session
-from models.users import User
-from models.views import VUser
-from repositories.profile_repository import ProfileRepository
+from src.database import get_session
+from src.models.users import User
+from src.models.views import VUser
+from src.repositories.profile_repository import ProfileRepository
 from src.config import Config
 
 settings = Config() # type: ignore

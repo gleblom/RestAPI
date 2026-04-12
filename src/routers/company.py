@@ -6,11 +6,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from typing import Annotated, cast
 from uuid import UUID
 
-from database import get_session
-from exceptions import AlreadyExists, NotFound
-from schemas.dictionaries import CompanyCreateDTO, CompanyReadDTO, CompanyUpdateDTO
-from security import CurrentUser
-from services.company_service import add_company_service, update_company_service
+from src.database import get_session
+from src.exceptions import AlreadyExists, NotFound
+from src.schemas.dictionaries import CompanyCreateDTO, CompanyReadDTO, CompanyUpdateDTO
+from src.security import CurrentUser
+from src.services.company_service import add_company_service, update_company_service
 
 router = APIRouter(
     prefix="/company",

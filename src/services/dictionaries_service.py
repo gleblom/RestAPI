@@ -7,9 +7,9 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.dictionaries import Role, Unit
-from repositories.dictionaries_repository import DictionariesRepository
-from schemas.dictionaries import (
+from src.models.dictionaries import Role, Unit
+from src.repositories.dictionaries_repository import DictionariesRepository
+from src.schemas.dictionaries import (
     RoleCreateDTO,
     RoleReadDTO,
     RoleUpdateDTO,
@@ -17,7 +17,7 @@ from schemas.dictionaries import (
     UnitReadDTO,
     UnitUpdateDTO,
 )
-from security import CurrentUser
+from src.security import CurrentUser
 
 
 async def list_roles_service(db: AsyncSession, current_user: CurrentUser):
