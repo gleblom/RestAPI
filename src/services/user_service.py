@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, cast
 from uuid import UUID
 
-from fastapi import Body, Depends, HTTPException
+from fastapi import Depends, HTTPException
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
