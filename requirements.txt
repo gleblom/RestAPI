@@ -13,7 +13,6 @@ colorama==0.4.6
 cryptography==46.0.6
 debugpy==1.8.20
 ecdsa==0.19.2
-eralchemy2==1.4.1
 fastapi==0.135.2
 h11==0.16.0
 idna==3.11
