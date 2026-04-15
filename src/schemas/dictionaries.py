@@ -5,17 +5,17 @@ from pydantic import BaseModel, ConfigDict
 
 
 class CompanyReadDTO(BaseModel):# @IgnoreException
-    company_name: str
+    name: str
     director_id: UUID
 
 
 class CompanyCreateDTO(BaseModel):# @IgnoreException
-    company_name: str
+    name: str
     director_id: UUID
 
 
 class CompanyUpdateDTO(BaseModel):# @IgnoreException
-    company_name: str
+    name: str
     company_id: UUID
 
 

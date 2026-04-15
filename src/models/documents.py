@@ -20,7 +20,6 @@ class Document(Base):
     route_id: Mapped[int] = mapped_column(Integer, ForeignKey("approval_routes.id"), nullable=True)
     category_id: Mapped[int] = mapped_column(Integer, ForeignKey("categories.id"))
     status_id: Mapped[int] = mapped_column(Integer, ForeignKey("statuses.id"))
-    doc_unit_id: Mapped[int] = mapped_column(Integer, ForeignKey("document_units.id"), nullable=True)
     author_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
 
     route = relationship("ApprovalRoute", back_populates="documents")

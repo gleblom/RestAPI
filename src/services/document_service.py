@@ -59,7 +59,6 @@ async def create_document_service(
             db,
         )
 
-        created_document.doc_unit_id = doc_unit.id
         await db.flush()
         await db.commit()
         await db.refresh(created_document)
@@ -114,13 +113,16 @@ async def create_document_version_service(
         next_version_number = version.version_number or await DocumentRepository.get_next_document_version_number(document_id, db)
 
         created_version = await DocumentRepository.create_document_version(
-            DocumentVersion(
-                document_id=document_id,
-                version_number=next_version_number,
-                url=version.url,
-            ),
-            db,
-        )
+        DocumentVersion(
+            document_id=document_id,
+            version_number=next_version_number,
+            storage_object_name=version.storage_object_name,
+            original_file_name=version.original_file_name,
+            mime_type=version.mime_type,
+            file_size=version.file_size,
+    ),
+    db,
+)
 
         document.status_id = DRAFT_STATUS_ID
         document.current_step_index = 0

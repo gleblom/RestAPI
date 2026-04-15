@@ -1,4 +1,6 @@
-from sqlalchemy import UUID, Boolean, Column, DateTime, Integer, String
+from datetime import datetime
+
+from sqlalchemy import UUID, Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.database import Base
@@ -11,9 +13,9 @@ class MVDocument(Base):
     title: Mapped[str] = mapped_column(String)
     current_step_index: Mapped[int] = mapped_column(Integer)
 
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True))
-    updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True))
-    expires_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     status_id: Mapped[int] = mapped_column(Integer)
     status_name : Mapped[str] = mapped_column(String)
@@ -59,7 +61,7 @@ class MVDocumentApproval(Base):
     step_index: Mapped[int] = mapped_column(Integer)
     is_approved: Mapped[bool] = mapped_column(Boolean)
 
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     def __repr__(self):
         return f"<MVApproval(id={self.id}, document_id={self.document_id}, step={self.step_index})>"
@@ -97,7 +99,7 @@ class MVDocumentVersion(Base):
     mime_type: Mapped[str] = mapped_column(String)
     file_size: Mapped[int] = mapped_column(Integer)
 
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     author_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True))
     author_email : Mapped[str] = mapped_column(String)
@@ -119,7 +121,7 @@ class MVNotification(Base):
     message : Mapped[str] = mapped_column(String)
     is_read: Mapped[bool] = mapped_column(Boolean)
 
-    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     def __repr__(self):
         return f"<MVNotification(id={self.id}, user={self.user_id}, read={self.is_read})>"
@@ -135,8 +137,8 @@ class VUser(Base):
     is_active: Mapped[bool] = mapped_column(Boolean)
     is_email_verified: Mapped[bool] = mapped_column(Boolean)
     
-    user_created_add: Mapped[bool] = mapped_column(Boolean)
-    user_updated_at: Mapped[bool] = mapped_column(Boolean)
+    user_created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    user_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     
     first_name: Mapped[str] = mapped_column(String)
     second_name: Mapped[str] = mapped_column(String)

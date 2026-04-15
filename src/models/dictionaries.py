@@ -60,7 +60,7 @@ class Company(Base):
     director_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
 
     users = relationship("User", back_populates="company")
-    routes = relationship("ApprovalRoute", "company")
+    routes = relationship("ApprovalRoute", back_populates="company")
     profiles = relationship("Profile", back_populates="company")
 
     roles = relationship("Role", back_populates="company")

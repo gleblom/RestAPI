@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.documents import Document, DocumentApproval, DocumentUnit, DocumentVersion, Notification
 from src.models.views import MVDocument, MVDocumentApproval, MVDocumentVersion
-from src.repositories.notification_repository import NotificationRepository
 
 
 class DocumentRepository:

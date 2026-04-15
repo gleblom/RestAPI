@@ -1,4 +1,5 @@
 
+from typing import cast
 from uuid import UUID
 
 from sqlalchemy import select
@@ -22,6 +23,10 @@ class ProfileRepository:
     async def get_profile_by_id(user_id: UUID, db: AsyncSession) -> VUser | None:
         result = await db.execute(select(VUser).where(VUser.user_id == user_id))
         return result.scalar_one_or_none()
+    @staticmethod
+    async def get_profile(user_id: UUID, db: AsyncSession) -> Profile | None:
+        result = await db.execute(select(Profile).where(Profile.id == user_id))
+        return result.scalar_one_or_none()
 
     
     @staticmethod
@@ -31,7 +36,9 @@ class ProfileRepository:
         return result.all()
     
     @staticmethod
-    async def update_profile(profile_data: dict, profile: ProfileDTO, db: AsyncSession):
+    async def update_profile(profile_data: dict, profile_dto: ProfileDTO, db: AsyncSession):
+        
+        profile = await ProfileRepository.get_profile(cast(UUID, profile_dto.id), db)
         
         for k, v in profile_data.items():
             setattr(profile, k, v)

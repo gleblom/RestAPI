@@ -38,7 +38,10 @@ class DocumentVersionCreateDTO(BaseModel):# @IgnoreException
 
     document_id: Optional[UUID] = None
     version_number: Optional[int] = None
-    url: str
+    storage_object_name: str
+    original_file_name: str
+    mime_type: str
+    file_size: int
 
 
 class DocumentVersionReadDTO(BaseModel):# @IgnoreException

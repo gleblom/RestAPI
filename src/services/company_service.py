@@ -1,10 +1,11 @@
 from typing import Annotated, cast
 from uuid import UUID
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.repositories.user_repository import UserRepository
 from src.database import get_session
 from src.exceptions import AlreadyExists, NotFound
 from src.models.dictionaries import Company
@@ -14,9 +15,14 @@ from src.security import CurrentUser
 
 async def add_company_service(
     db: Annotated[AsyncSession, Depends(get_session)], 
-    company_name: str,
+    name: str,
     director_id: UUID
     ):
+    
+    director = await UserRepository.get_user_by_id(director_id, db)
+    
+    if not director:
+        raise NotFound("User with this id not found")
     
     existed_company = await CompanyRepository.get_company_by_director(cast(UUID, director_id), db)
     
@@ -24,7 +30,7 @@ async def add_company_service(
         raise AlreadyExists("A company with such a director already exists.")
     
     company = Company(
-        company_name = company_name,
+        name = name,
         director_id = director_id
     )
     
@@ -50,7 +56,10 @@ async def update_company_service(
         raise NotFound()
     
     if company.director_id != current_user.company_id:
-        raise 
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not allowed to update this company",
+        )
     try:
         updated_company = await CompanyRepository.update_company({"company_name": company_name}, company, db)
         

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 class CompanyRepository:
     @staticmethod
     async def create_company(company: Company, db: AsyncSession) -> Company:
-        db.add(Company)
+        db.add(company)
         
         await db.flush()
         

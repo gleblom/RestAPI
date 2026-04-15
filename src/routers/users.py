@@ -38,38 +38,28 @@ async def get_users(db: Annotated[AsyncSession, Depends(get_session)], current_u
     users = await get_users_service(db, cast(UUID, current_user.company_id))
     return users
 
-#Создание профиля администратором или директором 
-@router.post("/profile", response_model=ProfileDTO, status_code=status.HTTP_201_CREATED, dependencies=[Depends(role_checker)])
+@router.put("/profile", response_model=ProfileDTO, status_code=status.HTTP_201_CREATED)
 async def create_profile(
     db: Annotated[AsyncSession, Depends(get_session)], 
     current_user: CurrentUser, 
     profile: ProfileDTO,
     ):
     try:   
-        if current_user.company_id == profile.company_id:
-            created_profile = await add_profile_service(db, profile)
+        if current_user.user_id == profile.id:
+            updated_profile = await update_profile_service(db, profile)
             
-            new_profile = ProfileDTO(
-                id = created_profile.id,
-                first_name=created_profile.first_name,
-                second_name=created_profile.second_name,
-                third_name=created_profile.third_name,
-                company_id=cast(UUID, created_profile.company_id),
-                role_id=created_profile.role_id,
-                unit_id=created_profile.unit_id
-            )
-            
-            return new_profile
-   
-    except AlreadyExists as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+            return updated_profile
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not allowed to perfrom this action")
     except SQLAlchemyError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail="Database error")
         
 
-@router.put("/profile", dependencies=[Depends(role_checker)])
+@router.put("/profile", response_model=ProfileDTO, dependencies=[Depends(role_checker)])
 async def update_profile(db: Annotated[AsyncSession, Depends(get_session)], current_user: CurrentUser, profile: ProfileDTO):
     
     if current_user.company_id == profile.company_id:

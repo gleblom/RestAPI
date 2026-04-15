@@ -20,7 +20,7 @@ router = APIRouter(
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=CompanyReadDTO)
 async def create_company(db: Annotated[AsyncSession, Depends(get_session)], company: CompanyCreateDTO):
     try:
-       created_company = await add_company_service(db, company.company_name, company.director_id)
+       created_company = await add_company_service(db, company.name, company.director_id)
        
        return created_company
     except AlreadyExists as e:
@@ -34,7 +34,7 @@ async def create_company(db: Annotated[AsyncSession, Depends(get_session)], comp
 @router.put("", status_code=status.HTTP_200_OK, response_model=CompanyReadDTO)
 async def update_company(db: Annotated[AsyncSession, Depends(get_session)], current_user: CurrentUser, company: CompanyUpdateDTO):
     try:
-        updated_company = await update_company_service(db, current_user, company.company_id, company.company_name)
+        updated_company = await update_company_service(db, current_user, company.company_id, company.name)
         
         return updated_company
     except NotFound as e:

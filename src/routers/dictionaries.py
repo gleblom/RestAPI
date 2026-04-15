@@ -31,11 +31,12 @@ router = APIRouter(prefix="/dictionaries", tags=["dictionaries"])
 role_checker = RoleChecker([1, 2])  # 1 - Директор, 2 - Админ
 
 
-@router.get("/roles", response_model=list[RoleReadDTO], dependencies=[Depends(role_checker)])
+@router.get("/roles", response_model=list[RoleReadDTO])
 async def get_roles(
     db: Annotated[AsyncSession, Depends(get_session)],
     current_user: CurrentUser,
 ):
+    
     return await list_roles_service(db, current_user)
 
 

@@ -7,6 +7,7 @@ from fastapi import Depends, HTTPException
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.schemas.users import ProfileDTO
 from src.database import get_session
 from src.exceptions import AccountNotVerified, AlreadyExists, Authentication, InvalidToken, NotActiveUser, NotFound
 from src.models.users import RefreshToken, User, UserToken
@@ -52,16 +53,17 @@ async def add_user_service(db: Annotated[AsyncSession, Depends(get_session)], em
     except Exception as e:
         await db.rollback()
         raise e
-
+ 
 async def update_user_company_service(db: Annotated[AsyncSession, Depends(get_session)], company_id: UUID, user_id: UUID):
     
-    user = await UserRepository.get_user_by_id(user_id, db)
+    profile = await ProfileRepository.get_profile(user_id, db)
     
-    if not user:
+    if not profile:
         raise NotFound("User not found")
     
     try:
-        await UserRepository.update_user({"company_id": company_id}, user, db)    
+        dto = ProfileDTO(id=cast(UUID, profile.id), first_name=None, second_name=None, third_name=None, role_id=None, unit_id=None, company_id=None)
+        await ProfileRepository.update_profile({"company_id": company_id}, dto, db)    
  
     except Exception as e:
         await db.rollback()
@@ -204,7 +206,7 @@ async def delete_token_service(token_value: str, db: Annotated[AsyncSession, Dep
     
 async def send_email_confirmation_service(email: str, db: Annotated[AsyncSession, Depends(get_session)]):
 
-    confirm_token_value = await create_token_service(email, "verification",db)
+    confirm_token_value, hash = await create_token_service(email, "verification",db)
 
     confirmation_link = f"http://{settings.domain}/api/auth/confirm-email?token={confirm_token_value}"
     
