@@ -4,7 +4,6 @@ import hmac
 import secrets
 from typing import Annotated, Any, List, cast
 from uuid import UUID
-from itsdangerous import URLSafeTimedSerializer
 from passlib.context import CryptContext
 
 from fastapi import Depends, HTTPException, status

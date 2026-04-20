@@ -1,14 +1,13 @@
 from typing import Annotated, cast
 from uuid import UUID
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.schemas.users import ProfileDTO
 from src.database import get_session
 from src.exceptions import AlreadyExists
-from src.models.users import Profile
 from src.repositories.profile_repository import ProfileRepository
 
 async def add_profile_service(db: Annotated[AsyncSession, Depends(get_session)], profile: ProfileDTO):
