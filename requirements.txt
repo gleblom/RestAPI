@@ -10,6 +10,8 @@ cffi==2.0.0
 charset-normalizer==3.4.7
 click==8.3.1
 colorama==0.4.6
+cbor2==6.0.1
+pyOpenSSL==26.1.0
 cryptography==46.0.6
 debugpy==1.8.20
 ecdsa==0.19.2
@@ -32,13 +34,17 @@ pydantic==2.12.5
 pydantic_core==2.41.5
 pydantic-settings==2.13.1
 PyJWT==1.7.1
+pyotp==2.9.0
 python-dotenv==1.2.2
 python-jose==3.5.0
 python-multipart==0.0.24
+slowapi==0.1.9
 requests==2.33.1
 resend==2.27.0
+webauthn==2.7.1
 rsa== 4.9.1
 setuptools==82.0.1
+limits==5.8.0
 email-validator==2.3.0
 six==1.17.0
 SQLAlchemy==2.0.48

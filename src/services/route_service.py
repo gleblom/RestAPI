@@ -290,7 +290,7 @@ async def get_route_graph_service(db: AsyncSession, current_user: CurrentUser, r
             route_id=node.route_id,
             approver_id=node.approver_id,
             approver_email=node.approver.email if node.approver else None,
-            approver_full_name=getattr(node.approver, "full_name", None) if node.approver else None,
+            approver_full_name= node.approver.profile.second_name + ' ' + node.approver.profile.first_name + ' ' + node.approver.profile.third_name if node.approver else None,
             step_index=node.step_index,
             incoming_count=incoming[node.id],
             outgoing_count=outgoing[node.id],

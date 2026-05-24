@@ -1,17 +1,19 @@
+from datetime import datetime
 from typing import Annotated, cast
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, UploadFile, status
+from fastapi import Depends, HTTPException, Request, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.schemas.approvals import DocumentApprovalReadDTO
 from src.config.main import Config
 from src.database import get_session
 from src.models.dictionaries import UnitCompany
 from src.models.documents import Document, DocumentUnit, DocumentVersion
 from src.repositories.document_repository import DocumentRepository
-from src.schemas.documents import DocumentCreateDTO, DocumentVersionCreateDTO
+from src.schemas.documents import DocumentCreateDTO, DocumentVersionCreateDTO, DocumentVersionReadDTO
 from src.security import CurrentUser
 
 
@@ -47,7 +49,6 @@ async def create_document_service(
             status_id=DRAFT_STATUS_ID,
             author_id=current_user.user_id,
             route_id=None,
-            doc_unit_id=None,
         )
         created_document = await DocumentRepository.create_document(new_document, db)
 
@@ -69,6 +70,35 @@ async def create_document_service(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database error while creating document",
         ) from e
+        
+async def create_document_units_service(current_user: CurrentUser, db: AsyncSession, unit_ids: list[int], document_id: UUID):
+    document = await DocumentRepository.get_document_by_id(document_id, db)
+    if not document:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    if current_user.user_id != document.author_id:
+         raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not allowed to public a document to another units",
+        )
+    try:
+        for u in unit_ids:
+            await DocumentRepository.create_document_unit(
+                DocumentUnit(
+                    document_id = document_id,
+                    unit_id=u,
+            ),
+            db,
+        )
+        await db.commit()
+        
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database error while creating document",
+        ) from e
+        
+        
 
 async def get_document_service(
     db: Annotated[AsyncSession, Depends(get_session)],
@@ -141,11 +171,15 @@ async def create_document_version_service(
 async def list_documents_service(
     db: AsyncSession,
     current_user: CurrentUser,
-    status_id: int | None = None,
-    category_id: int | None = None,
+    status_id: list[int]  | None = None,
+    category_id: list[int]  | None = None,
     search: str | None = None,
     mode: str | None = None,
+    authors: list[UUID] | None = None,
+    from_date: datetime | None = None,
+    to_date: datetime | None = None
 ):
+
     return await DocumentRepository.get_documents(
         db,
         user_id=cast(UUID, current_user.user_id),
@@ -154,8 +188,50 @@ async def list_documents_service(
         category_id=category_id,
         search=search,
         mode=mode,
+        authors=authors,
+        from_date=from_date,
+        to_date=to_date
     )
 
+async def get_document_versions_service(db: AsyncSession, current_user: CurrentUser, document_id: UUID):
+    document = get_document_service(db, current_user, document_id)
+    if document:
+        versions = await DocumentRepository.get_document_versions(document_id, db)
+        return versions
+
+async def get_document_approvals_service(db: AsyncSession, current_user: CurrentUser, document_id: UUID):
+    document = get_document_service(db, current_user, document_id)
+    if document:
+        approvals = await DocumentRepository.get_approvals_by_doc(document_id, db)
+        return approvals
+    
+async def get_document_approval_service(
+    db: AsyncSession, 
+    current_user: CurrentUser, 
+    document_id: UUID,
+    version_id: int,
+    step_index: int
+    ):
+    document = get_document_service(db, current_user, document_id)
+    if document:
+        approval = await DocumentRepository.get_document_approval_by_step(
+            document_id = document_id,
+            version_id = version_id, 
+            step_index = step_index, 
+            db = db
+            )
+        if approval:
+            approval_dto = DocumentApprovalReadDTO(
+            id = approval.id,
+            version_id = approval.version_id,
+            approver_id = cast(UUID, approval.approver_id),
+            step_index = approval.step_index,
+            is_approved = approval.is_approved,
+            comment = approval.comment,
+            created_at = cast(datetime, approval.created_at)
+        )
+        return approval_dto
+    
 async def upload_document_version_service(
     db: AsyncSession,
     current_user: CurrentUser,
@@ -183,9 +259,15 @@ async def upload_document_version_service(
             ),
             db,
         )
+        
+        doc_version = DocumentVersionReadDTO(
+            id = version.id,
+            document_id=cast( UUID, version.document_id),
+            version_number=version.version_number
+        )
         await db.commit()
         await db.refresh(version)
-        return version
+        return doc_version
     except SQLAlchemyError as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail="Database error while saving document version") from e

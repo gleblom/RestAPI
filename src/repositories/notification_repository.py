@@ -27,7 +27,7 @@ class NotificationRepository:
     async def get_notifications_by_user(user_id: UUID, db: AsyncSession):
         result = await db.execute(select(MVNotification).where(MVNotification.user_id == user_id))
         
-        return result.all()
+        return result.scalars().all()
     
     @staticmethod
     async def delete_notifcation(notification: Notification, db: AsyncSession):

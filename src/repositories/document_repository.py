@@ -1,7 +1,9 @@
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.models.documents import Document, DocumentApproval, DocumentUnit, DocumentVersion, Notification
 from src.models.views import MVDocument, MVDocumentApproval, MVDocumentVersion
@@ -117,10 +119,13 @@ class DocumentRepository:
         *,
         user_id: UUID,
         unit_id: int,
-        status_id: int | None = None,
-        category_id: int | None = None,
+        status_id: list[int]  | None = None,
+        category_id: list[int]  | None = None,
         search: str | None = None,
         mode: str | None = None, 
+        authors: list[UUID] | None = None,
+        from_date: datetime | None = None,
+        to_date: datetime | None = None
     ):
         query = select(MVDocument)
 
@@ -131,21 +136,26 @@ class DocumentRepository:
 
         elif mode == "all":
             conditions.append(MVDocument.status_id == 1)
+            query = select(MVDocument).join(DocumentUnit, DocumentUnit.document_id == MVDocument.document_id).where(DocumentUnit.unit_id == unit_id).distinct()
         elif mode == "incoming":
-            query = query.join(Notification).where(Notification.user_id == user_id)
+            query = select(MVDocument).join(Notification, Notification.document_id == MVDocument.document_id).where(Notification.user_id == user_id)
 
         else:
             conditions.append(MVDocument.unit_id == unit_id)
 
         if status_id:
-            conditions.append(MVDocument.status_id == status_id)
+            conditions.append(MVDocument.status_id.in_(status_id))
 
         if category_id:
-            conditions.append(MVDocument.category_id == category_id)
-
+            conditions.append(MVDocument.category_id.in_(category_id))
+        if authors:
+            conditions.append(MVDocument.author_id.in_(authors))
         if search:
             conditions.append(MVDocument.title.ilike(f"%{search}%"))
-
+        if from_date:
+            conditions.append(MVDocument.created_at.between(from_date, to_date))
+        if to_date:
+            conditions.append(MVDocument.created_at.between(from_date, to_date))
         if conditions:
             query = query.where(and_(*conditions))
 
@@ -155,11 +165,10 @@ class DocumentRepository:
 
     @staticmethod
     async def get_document_version(document_id: UUID, version_id: int, db: AsyncSession) -> DocumentVersion | None:
-        result = await db.execute(
-            select(DocumentVersion).where(
-                DocumentVersion.document_id == document_id,
-                DocumentVersion.id == version_id,
-            )
-        )
+        result = await db.execute(select(DocumentVersion)
+            .where(DocumentVersion.document_id == document_id,
+                   DocumentVersion.id == version_id,)
+        .options(selectinload(DocumentVersion.document)
+            .selectinload(Document.approvals)))
         return result.scalar_one_or_none()
             

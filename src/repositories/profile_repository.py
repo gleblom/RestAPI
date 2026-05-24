@@ -2,7 +2,7 @@
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.schemas.users import ProfileDTO
@@ -30,10 +30,31 @@ class ProfileRepository:
 
     
     @staticmethod
-    async def get_users_by_company(company_id: UUID, db:AsyncSession):
-        result = await db.execute(select(VUser).where(VUser.company_id == company_id))
+    async def get_users_by_company(
+        company_id: UUID, 
+        db:AsyncSession,
+        user_name: str  | None = None,
+        units: list[int]  | None = None,
+        roles: list[int]  | None = None
+        ):
+        query = select(VUser)
         
-        return result.all()
+        conditions = []
+
+        conditions.append(VUser.company_id == company_id)
+        
+        if user_name:
+            conditions.append(func.concat(VUser.first_name, '', VUser.second_name, '', VUser.third_name).like(f"%user_name%"))
+        if units:
+            conditions.append(VUser.unit_id.in_(units))
+        if roles:
+            conditions.append(VUser.role_id.in_(roles))
+        if conditions:
+            query = query.where(and_(*conditions))
+            
+        result = await db.execute(query)    
+
+        return result.scalars().all()
     
     @staticmethod
     async def update_profile(profile_data: dict, profile_dto: ProfileDTO, db: AsyncSession):

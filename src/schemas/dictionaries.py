@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class CompanyReadDTO(BaseModel):# @IgnoreException
+    id: UUID
     name: str
     director_id: UUID
 
@@ -54,5 +55,26 @@ class UnitReadDTO(BaseModel):# @IgnoreException
 
 
 class UnitCompanyLinkDTO(BaseModel):# @IgnoreException
+    model_config = ConfigDict(from_attributes=True)
     unit_id: int
     company_id: UUID
+
+    
+class RoleCategoryDTO(BaseModel): # @IgnoreException
+    model_config = ConfigDict(from_attributes=True)
+    role_id: int
+    category_ids: list[int] = []
+
+class RoleCategoryReadDTO(BaseModel): # @IgnoreException
+    model_config = ConfigDict(from_attributes=True)
+    role_id: int
+    category_id: int
+    
+class SimpleDTO(BaseModel):# @IgnoreException
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    name: str
+
+
+    

@@ -1,13 +1,13 @@
 from datetime import datetime
-from typing import Optional
+from typing import Annotated, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DocumentCreateDTO(BaseModel):# @IgnoreException
-    title: str
-    category_id: int
+    title: str = Field(min_length=1, max_length=32)
+    category_id: int = Field(ge=1, le=9)
     unit_id: int
     expires_at: Optional[datetime] = None
 
@@ -16,10 +16,10 @@ class DocumentReadDTO(BaseModel):# @IgnoreException
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    title: str
+    title: str = Field(min_length=1, max_length=32)
     current_step_index: int
-    status_id: int
-    category_id: int
+    status_id: int = Field(ge=1, le=4)
+    category_id: int = Field(ge=1, le=9)
     route_id: Optional[int] = None
     author_id: UUID
     created_at: datetime
@@ -29,9 +29,9 @@ class DocumentReadDTO(BaseModel):# @IgnoreException
 class DocumentUpdateDTO(BaseModel):# @IgnoreException
     id: UUID
     route_id: Optional[int] = None
-    status_id: Optional[int] = None
+    status_id: Annotated[int | None, Field(ge=1, le=4)] = None
     current_step_index: Optional[int] = None
-    title: Optional[str] = None
+    title: Annotated[str | None, Field(min_length=1, max_length=32)] = None
 
 
 class DocumentVersionCreateDTO(BaseModel):# @IgnoreException
@@ -50,8 +50,6 @@ class DocumentVersionReadDTO(BaseModel):# @IgnoreException
     id: int
     document_id: UUID
     version_number: int
-    url: str
-    created_at: datetime
 
 
 class DocumentSubmitDTO(BaseModel):# @IgnoreException

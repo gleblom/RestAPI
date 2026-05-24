@@ -14,10 +14,15 @@ class Config(BaseSettings):    # @IgnoreException
    from_email: str = Field(..., alias="from_email")
    domain: str = Field(..., alias="domain")
    
+   webauthn_rp_id: str = Field(..., alias="rp_id")
+   webauthn_origin: str = Field(..., alias="origin")
+   webauthn_rp_name: str = Field(..., alias="rp_name")
+   
+   fernet_key: str = Field(..., alias="fernet_key")
    secret_key: SecretStr = Field(..., alias = "secret_key")
    algorithm: str = "HS256"
-   access_token_expire_minutes: int = 30
    
+   access_token_expire_minutes: int = 15
    refresh_token_expire_days: int = 30
    
    minio_endpoint: str = Field(..., alias="minio_endpoint")

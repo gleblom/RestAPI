@@ -2,8 +2,8 @@ from sqlalchemy import UUID, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.models.users import User
 from src.models.approval_routes import ApprovalRoute, RouteEdge, RouteNode
-from src.models.views import MVRoute
 
 class RouteRepository:
     
@@ -89,7 +89,17 @@ class RouteRepository:
     
     @staticmethod
     async def get_route(route_id: int, db: AsyncSession) -> ApprovalRoute | None:
-        result = await db.execute(select(ApprovalRoute).where(ApprovalRoute.id == route_id))
+        result = await db.execute(
+            select(
+                ApprovalRoute
+                ).where(
+                    ApprovalRoute.id == route_id
+                    ).options(
+                        selectinload(ApprovalRoute.nodes)
+                        .selectinload(RouteNode.approver)
+                        .selectinload(User.profile), 
+                        selectinload(ApprovalRoute.edges)))
+        
         return result.scalar_one_or_none()
 
     @staticmethod

@@ -6,7 +6,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.models.dictionaries import Role, Unit, UnitCompany
+from src.models.dictionaries import Category, Role, RoleCategory, Status, Unit, UnitCompany
 from src.models.users import Profile
 
 
@@ -125,3 +125,37 @@ class DictionariesRepository:
     async def unit_is_used(unit_id: int, db: AsyncSession) -> bool:
         result = await db.execute(select(Profile.id).where(Profile.unit_id == unit_id))
         return result.scalar_one_or_none() is not None
+    
+    # ----role categories----
+    
+    @staticmethod
+    async def add_role_categories(category_ids:list[int], role_id: int, db: AsyncSession):
+        for category_id in category_ids:
+            db.add(
+                RoleCategory(
+                    role_id = role_id,
+                    category_id = category_id
+                )
+            )
+        await db.flush()
+        
+    @staticmethod
+    async def get_role_categories(role_id: int, db: AsyncSession):
+        result = await db.execute(select(RoleCategory).where(RoleCategory.role_id == role_id))
+        return result.scalars().all()
+    
+    @staticmethod 
+    async def delete_role_categories(records: list[RoleCategory], db: AsyncSession):
+        for rc in records:
+           await db.delete(rc)
+           
+    @staticmethod
+    async def get_categories(db: AsyncSession):
+        result = await db.execute(select(Category))
+        return result.scalars().all()
+    
+    @staticmethod
+    async def get_statuses(db: AsyncSession):
+        result = await db.execute(select(Status))
+        
+        return result.scalars().all()

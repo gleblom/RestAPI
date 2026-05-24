@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from select import select
 from typing import cast
 from uuid import UUID
 
@@ -7,9 +8,12 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.dictionaries import Role, Unit
+from src.exceptions import AlreadyExists
+from src.repositories.company_repository import CompanyRepository
+from src.models.dictionaries import Role, RoleCategory, Unit
 from src.repositories.dictionaries_repository import DictionariesRepository
 from src.schemas.dictionaries import (
+    RoleCategoryDTO,
     RoleCreateDTO,
     RoleReadDTO,
     RoleUpdateDTO,
@@ -160,6 +164,8 @@ async def attach_unit_to_company_service(db: AsyncSession, current_user: Current
     unit = await DictionariesRepository.get_unit(unit_id, db)
     if not unit:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unit not found")
+    if current_user.company_id != company_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not allowed to attach unit to this company")
 
     try:
         await DictionariesRepository.add_unit_company(unit.id, company_id, db)
@@ -178,6 +184,9 @@ async def detach_unit_from_company_service(db: AsyncSession, current_user: Curre
     unit = await DictionariesRepository.get_unit(unit_id, db)
     if not unit:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unit not found")
+    company_unit = await CompanyRepository.get_company_units(cast(UUID, current_user.company_id), unit_id, db)
+    if not company_unit:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unit not found")
 
     try:
         await DictionariesRepository.remove_unit_company(unit.id, company_id, db)
@@ -189,3 +198,108 @@ async def detach_unit_from_company_service(db: AsyncSession, current_user: Curre
     except SQLAlchemyError as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail="Database error while unlinking unit from company") from e
+
+async def get_role_categories_service(db: AsyncSession, role_id: int, current_user: CurrentUser):
+    role = await DictionariesRepository.get_role(role_id, db)
+    if not role:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+    if role.company_id != current_user.company_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+    try:
+        role_categories = await DictionariesRepository.get_role_categories(role_id, db)
+        return role_categories
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Database error while getting role categories") from e
+    
+    
+async def add_role_categories_service(db: AsyncSession, payload: RoleCategoryDTO, current_user: CurrentUser):
+    try:
+        role = await DictionariesRepository.get_role(payload.role_id, db)
+        
+        if not role:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+        
+        if role.id == 1 or role.id == 2 or role.id == 3:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="You can't add categories to this roles")
+        
+        if role.company_id != current_user.company_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not allowed to add role categories to this company")
+            
+        
+        role_categories = await DictionariesRepository.get_role_categories(payload.role_id, db)
+        
+        if role_categories:
+            raise AlreadyExists("Role categories Already Exists")
+        
+        await DictionariesRepository.add_role_categories(payload.category_ids, payload.role_id, db)
+        
+        await db.commit()
+        
+        new_role_categories = await DictionariesRepository.get_role_categories(payload.role_id, db)        
+        return new_role_categories
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Database error") from e
+    
+async def update_role_categories_service(db: AsyncSession, payload: RoleCategoryDTO, current_user: CurrentUser):
+    try:
+        role = await DictionariesRepository.get_role(payload.role_id, db)
+        
+        if not role:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+        
+        if role.company_id != current_user.company_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not allowed to update role categories to this company")
+        
+        role_categories = list(await DictionariesRepository.get_role_categories(payload.role_id, db))
+        
+        current_categories = set([x.category_id for x in role_categories])
+        
+        categories_to_add = [x for x in payload.category_ids if x not in current_categories]
+        categories_to_remove = [x for x in current_categories if x not in payload.category_ids]
+        
+
+        new_role_categories = list(
+            filter(
+                lambda category_id: 
+                    RoleCategory(
+                        role_id = payload.role_id, 
+                        category_id = category_id), 
+                    categories_to_add))
+        if any(new_role_categories):
+            await DictionariesRepository.add_role_categories(new_role_categories, payload.role_id, db)
+        if any(categories_to_remove):
+            records_to_delete = list(
+                filter(
+                    lambda rc: 
+                        rc.category_id in categories_to_remove, 
+                        role_categories))
+            await DictionariesRepository.delete_role_categories(records_to_delete, db)
+        
+        await db.commit()
+        
+        updated_role_categories = await DictionariesRepository.get_role_categories(payload.role_id, db)
+        
+        return updated_role_categories
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Database error") from e
+            
+async def get_categories_service(db: AsyncSession):
+    try:
+        return await DictionariesRepository.get_categories(db)
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Database error") from e
+    
+        
+async def get_statuses_service(db):
+    try:
+        return await DictionariesRepository.get_statuses(db)
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Database error") from e   
+        
+    
+            

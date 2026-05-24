@@ -4,15 +4,15 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 
-class ApprovalRouteCreateDTO(BaseModel):
+class ApprovalRouteCreateDTO(BaseModel): # @IgnoreException
     name: str
 
 
-class ApprovalRouteUpdateDTO(BaseModel):
+class ApprovalRouteUpdateDTO(BaseModel): # @IgnoreException
     name: Optional[str] = None
 
 
-class ApprovalRouteReadDTO(BaseModel):
+class ApprovalRouteReadDTO(BaseModel): # @IgnoreException
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -21,17 +21,17 @@ class ApprovalRouteReadDTO(BaseModel):
     company_id: UUID
 
 
-class RouteNodeCreateDTO(BaseModel):
+class RouteNodeCreateDTO(BaseModel): # @IgnoreException
     approver_id: UUID
     step_index: int
 
 
-class RouteNodeUpdateDTO(BaseModel):
+class RouteNodeUpdateDTO(BaseModel): # @IgnoreException
     approver_id: Optional[UUID] = None
     step_index: Optional[int] = None
 
 
-class RouteNodeReadDTO(BaseModel):
+class RouteNodeReadDTO(BaseModel): # @IgnoreException
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -40,12 +40,12 @@ class RouteNodeReadDTO(BaseModel):
     step_index: int
 
 
-class RouteEdgeCreateDTO(BaseModel):
+class RouteEdgeCreateDTO(BaseModel): # @IgnoreException
     from_node_id: int
     to_node_id: int
 
 
-class RouteEdgeReadDTO(BaseModel):
+class RouteEdgeReadDTO(BaseModel): # @IgnoreException
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -54,7 +54,7 @@ class RouteEdgeReadDTO(BaseModel):
     to_node_id: int
 
 
-class RouteGraphNodeDTO(BaseModel):
+class RouteGraphNodeDTO(BaseModel): # @IgnoreException
     id: int
     route_id: int
     approver_id: UUID
@@ -68,14 +68,14 @@ class RouteGraphNodeDTO(BaseModel):
     level: int
 
 
-class RouteGraphEdgeDTO(BaseModel):
+class RouteGraphEdgeDTO(BaseModel): # @IgnoreException
     id: int
     route_id: int
     from_node_id: int
     to_node_id: int
 
 
-class RouteGraphDTO(BaseModel):
+class RouteGraphDTO(BaseModel): # @IgnoreException
     route: ApprovalRouteReadDTO
     nodes: list[RouteGraphNodeDTO]
     edges: list[RouteGraphEdgeDTO]

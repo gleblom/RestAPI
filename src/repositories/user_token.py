@@ -5,7 +5,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from src.models.users import User, UserToken
+from src.models.users import UserToken
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +30,8 @@ class UserTokenRepository:
       
       await db.flush()
     
+        
+    
     @staticmethod 
     async def delete_recovery_token(user_id: UUID, db: AsyncSession):
          result = await db.execute(
@@ -38,11 +40,12 @@ class UserTokenRepository:
                  UserToken.user_id == user_id and 
                  UserToken.token_type == "recovery")
              )
+        
          token = result.scalar_one_or_none()
          
-         await db.delete(token)
-         
-         await db.flush()
+         if token:
+             await db.delete(token)
+             await db.flush()
         
     
     @staticmethod 

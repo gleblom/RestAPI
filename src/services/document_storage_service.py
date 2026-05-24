@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import uuid
 
 from fastapi import HTTPException, UploadFile, status
@@ -10,6 +11,7 @@ from src.repositories.document_repository import DocumentRepository
 from src.services.document_file_service import ensure_pdf_file
 from src.storage.minio_client import MINIO_BUCKET, minio_client
 
+logger = logging.getLogger("uvicorn.access")
 
 async def upload_document_version_to_storage(
     db: AsyncSession,
@@ -29,6 +31,9 @@ async def upload_document_version_to_storage(
 
     try:
         file_size = pdf_path.stat().st_size
+        MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail="File too large")
         with pdf_path.open("rb") as fh:
             minio_client.put_object(
                 bucket_name=MINIO_BUCKET,
@@ -42,8 +47,8 @@ async def upload_document_version_to_storage(
     finally:
         try:
             pdf_path.unlink(missing_ok=True)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to delete temp file: {e}")
 
     return {
         "version_number": next_version_number,

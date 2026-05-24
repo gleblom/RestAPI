@@ -22,15 +22,15 @@ class Document(Base):
     status_id: Mapped[int] = mapped_column(Integer, ForeignKey("statuses.id"))
     author_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
 
-    route = relationship("ApprovalRoute", back_populates="documents")
-    category = relationship("Category", back_populates="documents")
-    status = relationship("Status", back_populates="documents")
-    author = relationship("User", back_populates="documents")
+    route = relationship("ApprovalRoute", back_populates="documents", lazy="raise")
+    category = relationship("Category", back_populates="documents", lazy="raise")
+    status = relationship("Status", back_populates="documents", lazy="raise")
+    author = relationship("User", back_populates="documents", lazy="raise")
 
-    versions = relationship("DocumentVersion", back_populates="document", cascade="all, delete-orphan")
-    approvals = relationship("DocumentApproval", back_populates="document")
+    versions = relationship("DocumentVersion", back_populates="document", cascade="all, delete-orphan", lazy="raise")
+    approvals = relationship("DocumentApproval", back_populates="document", lazy="raise")
 
-    document_units = relationship("DocumentUnit", back_populates="document")
+    document_units = relationship("DocumentUnit", back_populates="document", lazy="raise")
 
     __table_args__ = (
         Index("ix_documents_search", "status_id", "category_id", "created_at"),
@@ -46,12 +46,8 @@ class DocumentUnit(Base):
     document_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
     unit_id: Mapped[int] = mapped_column(Integer, ForeignKey("units.id", ondelete="CASCADE"), nullable=False)
 
-    document = relationship("Document", back_populates="document_units")
-    unit = relationship("Unit", back_populates="document_units")
-
-    __table_args__ = (
-        UniqueConstraint("document_id", "unit_id"),
-    )
+    document = relationship("Document", back_populates="document_units", lazy="raise")
+    unit = relationship("Unit", back_populates="document_units", lazy="raise")
     
     def __repr__(self):
         return f"<DocumentUnit(id={self.id}, document_id={self.document_id}, unit_id={self.unit_id})>"
@@ -72,8 +68,8 @@ class DocumentVersion(Base):
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    document = relationship("Document", back_populates="versions")
-    approvals = relationship("DocumentApproval", back_populates="version")
+    document = relationship("Document", back_populates="versions", lazy="raise")
+    approvals = relationship("DocumentApproval", back_populates="version", lazy="raise")
 
     __table_args__ = (
         UniqueConstraint("document_id", "version_number"),
@@ -98,9 +94,9 @@ class DocumentApproval(Base):
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    version = relationship("DocumentVersion", back_populates="approvals")
-    document = relationship("Document", back_populates="approvals")
-    approver = relationship("User", back_populates="document_approvals")
+    version = relationship("DocumentVersion", back_populates="approvals", lazy="raise")
+    document = relationship("Document", back_populates="approvals", lazy="raise")
+    approver = relationship("User", back_populates="document_approvals", lazy="raise")
 
     __table_args__ = (
         Index("ix_doc_approval_step", "version_id", "step_index"),
@@ -122,8 +118,8 @@ class Notification(Base):
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    user = relationship("User", back_populates="notifications")
-    document = relationship("Document")
+    user = relationship("User", back_populates="notifications", lazy="raise")
+    document = relationship("Document", lazy="raise")
 
     __table_args__ = (
         Index("ix_notifications_user", "user_id", "is_read"),

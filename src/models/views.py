@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from pydantic import ConfigDict
 from sqlalchemy import UUID, Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -47,7 +48,7 @@ class MVDocument(Base):
 class MVDocumentApproval(Base):
     __tablename__ = "mv_document_approvals"
 
-    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    id: Mapped[UUID] = mapped_column(Integer, primary_key=True)
 
     version_id: Mapped[int] = mapped_column(Integer)
     document_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True))
@@ -129,6 +130,7 @@ class MVNotification(Base):
 class VUser(Base):
     __tablename__ = "v_users_full"
     
+
     user_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     
     user_email : Mapped[str] = mapped_column(String)
@@ -136,6 +138,11 @@ class VUser(Base):
     
     is_active: Mapped[bool] = mapped_column(Boolean)
     is_email_verified: Mapped[bool] = mapped_column(Boolean)
+    
+    otp_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    otp_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    
+    passkey_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     
     user_created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     user_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

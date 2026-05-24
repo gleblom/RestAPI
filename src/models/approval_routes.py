@@ -13,12 +13,12 @@ class ApprovalRoute(Base):
     
     company_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id"))
 
-    creator = relationship("User", back_populates="created_routes")
-    company = relationship("Company", back_populates="routes")
-    documents = relationship("Document", back_populates="route")
+    creator = relationship("User", back_populates="created_routes", lazy="raise")
+    company = relationship("Company", back_populates="routes", lazy="raise")
+    documents = relationship("Document", back_populates="route", lazy="raise")
 
-    nodes = relationship("RouteNode", back_populates="route", cascade="all, delete-orphan")
-    edges = relationship("RouteEdge", back_populates="route", cascade="all, delete-orphan")
+    nodes = relationship("RouteNode", back_populates="route", cascade="all, delete-orphan", lazy="raise")
+    edges = relationship("RouteEdge", back_populates="route", cascade="all, delete-orphan", lazy="raise")
     
     def __repr__(self):
         return f"<ApprovalRoute(id={self.id}, name={self.name}, created_by={self.created_by})>"
@@ -33,12 +33,12 @@ class RouteNode(Base):
 
     step_index: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    route = relationship("ApprovalRoute", back_populates="nodes")
-    approver = relationship("User", back_populates="route_nodes")
+    route = relationship("ApprovalRoute", back_populates="nodes", lazy="raise")
+    approver = relationship("User", back_populates="route_nodes", lazy="raise")
 
-    outgoing_edges = relationship("RouteEdge",foreign_keys="RouteEdge.from_node_id",back_populates="from_node")
+    outgoing_edges = relationship("RouteEdge",foreign_keys="RouteEdge.from_node_id",back_populates="from_node", lazy="raise")
 
-    incoming_edges = relationship("RouteEdge", foreign_keys="RouteEdge.to_node_id", back_populates="to_node")
+    incoming_edges = relationship("RouteEdge", foreign_keys="RouteEdge.to_node_id", back_populates="to_node", lazy="raise")
 
     __table_args__ = (
         UniqueConstraint("route_id" , "step_index"),
@@ -58,8 +58,8 @@ class RouteEdge(Base):
 
     route = relationship("ApprovalRoute", back_populates="edges")
 
-    from_node = relationship("RouteNode",foreign_keys=[from_node_id],back_populates="outgoing_edges")
-    to_node = relationship("RouteNode", foreign_keys=[to_node_id], back_populates="incoming_edges")
+    from_node = relationship("RouteNode",foreign_keys=[from_node_id],back_populates="outgoing_edges", lazy="raise")
+    to_node = relationship("RouteNode", foreign_keys=[to_node_id], back_populates="incoming_edges", lazy="raise")
     
     
     def __repr__(self):

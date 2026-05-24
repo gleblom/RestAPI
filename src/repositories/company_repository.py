@@ -2,7 +2,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from src.models.dictionaries import Company
+from src.models.dictionaries import Company, UnitCompany
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,5 +36,11 @@ class CompanyRepository:
         await db.flush()
         
         return company
+    
+    @staticmethod
+    async def get_company_units(comapny_id: UUID, unit_id: int, db: AsyncSession):
+        result = await db.execute(select(UnitCompany).where(UnitCompany.company_id == comapny_id, UnitCompany.unit_id == unit_id))
+        
+        return result.scalar_one_or_none()
     
     

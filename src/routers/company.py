@@ -9,15 +9,17 @@ from uuid import UUID
 from src.database import get_session
 from src.exceptions import AlreadyExists, NotFound
 from src.schemas.dictionaries import CompanyCreateDTO, CompanyReadDTO, CompanyUpdateDTO
-from src.security import CurrentUser
+from src.security import CurrentUser, RoleChecker
 from src.services.company_service import add_company_service, update_company_service
 
 router = APIRouter(
     prefix="/company",
     tags=["company"],
 )      
+
+role_checker = RoleChecker([1])    
     
-@router.post("", status_code=status.HTTP_201_CREATED, response_model=CompanyReadDTO)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=CompanyReadDTO, dependencies=[Depends(role_checker)])
 async def create_company(db: Annotated[AsyncSession, Depends(get_session)], company: CompanyCreateDTO):
     try:
        created_company = await add_company_service(db, company.name, company.director_id)
@@ -31,7 +33,7 @@ async def create_company(db: Annotated[AsyncSession, Depends(get_session)], comp
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail="Database error")
         
-@router.put("", status_code=status.HTTP_200_OK, response_model=CompanyReadDTO)
+@router.put("", status_code=status.HTTP_200_OK, response_model=CompanyReadDTO, dependencies=[Depends(role_checker)])
 async def update_company(db: Annotated[AsyncSession, Depends(get_session)], current_user: CurrentUser, company: CompanyUpdateDTO):
     try:
         updated_company = await update_company_service(db, current_user, company.company_id, company.name)

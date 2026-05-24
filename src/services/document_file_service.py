@@ -37,8 +37,9 @@ async def ensure_pdf_file(upload: UploadFile) -> tuple[Path, str, str]:
         # already a PDF
         if content_type == PDF_MIME or suffix == ".pdf":
             final_pdf = tmpdir_path / f"{source_path.stem}.pdf"
-            shutil.copy2(source_path, final_pdf)
-            persisted_pdf = Path(tempfile.mkstemp(suffix=".pdf")[1])
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                persisted_pdf = Path(tmp.name)
+            
             shutil.copy2(final_pdf, persisted_pdf)
             return persisted_pdf, original_name, PDF_MIME
 

@@ -1,3 +1,6 @@
+import json
+
+from cryptography.fernet import Fernet
 from fastapi import FastAPI
 
 from src.exceptions import register_all_errors
@@ -8,6 +11,7 @@ from src.routers.auth import router as auth_router
 from src.routers.company import router as company_router
 from src.routers.documents import router as documents_router
 from src.routers.users import router as users_router
+from src.routers.routes import router as route_router
 from src.routers.dictionaries import router as dictionaries_router
 
 app = FastAPI()
@@ -22,4 +26,12 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(company_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(documents_router, prefix="/api")
+app.include_router(route_router, prefix="/api")
 app.include_router(dictionaries_router, prefix="/api")
+
+
+@app.get("/.well-known/assetlinks.json")
+async def get_json_file():
+    with open("assetlinks.json", "r") as f:
+        data = json.load(f)
+    return data 

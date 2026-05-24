@@ -15,8 +15,8 @@ from src.schemas.routes import (
     RouteNodeReadDTO,
     RouteNodeUpdateDTO,
 )
-from security import CurrentUser
-from services.route_service import (
+from src.security import CurrentUser
+from src.services.route_service import (
     add_edge_service,
     add_node_service,
     create_route_service,

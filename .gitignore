@@ -76,3 +76,5 @@ Thumbs.db
 coverage.xml
 nosetests.xml
 hypothesis/
+tests/TEST_PLAN.md
+DOCSTRING_EXAMPLES.md

@@ -6,6 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_session
 from src.schemas.dictionaries import (
+    SimpleDTO,
+    RoleCategoryDTO,
+    RoleCategoryReadDTO,
     RoleCreateDTO,
     RoleReadDTO,
     RoleUpdateDTO,
@@ -15,20 +18,25 @@ from src.schemas.dictionaries import (
 )
 from src.security import CurrentUser, RoleChecker
 from src.services.dictionaries_service import (
+    add_role_categories_service,
     attach_unit_to_company_service,
     create_role_service,
     create_unit_service,
     delete_role_service,
     delete_unit_service,
     detach_unit_from_company_service,
+    get_categories_service,
+    get_role_categories_service,
+    get_statuses_service,
     list_roles_service,
     list_units_service,
+    update_role_categories_service,
     update_role_service,
     update_unit_service,
 )
 
 router = APIRouter(prefix="/dictionaries", tags=["dictionaries"])
-role_checker = RoleChecker([1, 2])  # 1 - Директор, 2 - Админ
+role_checker = RoleChecker([1, 2, 3])  # 1 - Директор, 2 - Админ
 
 
 @router.get("/roles", response_model=list[RoleReadDTO])
@@ -122,3 +130,38 @@ async def detach_unit_from_company(
     current_user: CurrentUser,
 ):
     return await detach_unit_from_company_service(db, current_user, unit_id, company_id)
+
+@router.get("/role_categories/{role_id}", response_model=list[RoleCategoryReadDTO], status_code=status.HTTP_201_CREATED, dependencies=[Depends(role_checker)])
+async def get_role_category(
+    db: Annotated[AsyncSession, Depends(get_session)], 
+    current_user: CurrentUser, 
+    role_id: int
+):
+    return await get_role_categories_service(db, role_id, current_user)
+
+@router.post("/role_categories", response_model=list[RoleCategoryReadDTO], status_code=status.HTTP_201_CREATED, dependencies=[Depends(role_checker)])
+async def add_role_category(
+    db: Annotated[AsyncSession, Depends(get_session)], 
+    current_user: CurrentUser, 
+    payload: RoleCategoryDTO
+):
+    role_categories = await add_role_categories_service(db, payload, current_user)
+    return role_categories
+
+@router.post("/update/role_categories", response_model=list[RoleCategoryReadDTO], status_code=status.HTTP_200_OK, dependencies=[Depends(role_checker)])
+async def update_role_category(
+    db: Annotated[AsyncSession, Depends(get_session)], 
+    current_user: CurrentUser, 
+    payload: RoleCategoryDTO):
+    role_categories = await update_role_categories_service(db, payload, current_user)
+    return role_categories
+
+@router.get("/categories", response_model=list[SimpleDTO])
+async def get_categories(db: Annotated[AsyncSession, Depends(get_session)]):
+    categotries = await get_categories_service(db)
+    return categotries
+
+@router.get("/statuses", response_model=list[SimpleDTO])
+async def get_statuses(db: Annotated[AsyncSession, Depends(get_session)]):
+    statuses = await get_statuses_service(db)
+    return statuses

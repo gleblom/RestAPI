@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.ETI.app",
+    "sha256_cert_fingerprints": [
+      "BC:42:18:0D:FE:67:ED:75:08:23:8D:9E:71:AD:E7:ED:C9:52:10:B6:4B:AE:85:B3:4E:7C:89:17:7D:36:9A:C5"
+    ]
+  }
+}]

@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 
+from pydantic import Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -240,7 +241,7 @@ async def reject_document_service(
     db: Annotated[AsyncSession, Depends(get_session)],
     current_user: CurrentUser,
     document_id: UUID,
-    comment: str,
+    comment: str = Field(min_length=10, max_length=128),
 ):
     if not comment or not comment.strip():
         raise HTTPException(

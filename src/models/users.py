@@ -21,6 +21,16 @@ class User(Base):
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
+    otp_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    otp_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    otp_secret_enc: Mapped[str] = mapped_column(String, nullable=True)
+    otp_pending_secret_enc: Mapped[str] = mapped_column(String, nullable=True)
+    otp_last_used_step: Mapped[int] = mapped_column(Integer, nullable=True)
+    otp_failed_attempts: Mapped[int] = mapped_column(Integer, nullable=True)
+    otp_locked_until: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    passkey_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    
     company = relationship("Company", back_populates="users")
 
     tokens = relationship("UserToken", back_populates="user", cascade="all, delete-orphan")
@@ -36,7 +46,7 @@ class User(Base):
 
     notifications = relationship("Notification", back_populates="user")
     
-    
+    webauthn_credentials = relationship("WebAuthnCredential", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, is_active={self.is_active}, is_email_verified={self.is_email_verified})>"
@@ -74,6 +84,10 @@ class RefreshToken(Base):
 
     issued_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     expires_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+    
+    auth_level: Mapped[str] = mapped_column(String, nullable=False)
+    jti: Mapped[UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    parent_jti: Mapped[UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
     user = relationship("User", back_populates="refresh_tokens")
 
