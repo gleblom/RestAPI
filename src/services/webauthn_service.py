@@ -173,8 +173,6 @@ async def finish_webauthn_registration_service(
 
     credential_id_b64 = _b64url_encode(verification.credential_id)
     public_key_b64 = _b64url_encode(verification.credential_public_key)
-    device_id=payload.get("device_id"),
-    device_name=payload.get("device_name"),
     db.add(
         WebAuthnCredential(
             user_id=user.id,

@@ -237,7 +237,7 @@ async def webauthn_login_finish(
         "refresh_token": refresh_token,
     }
 
-@router.get("/webauthn/status/{device_id}")
+@router.get("/webauthn/status")
 async def webauthn_status(
     db: Annotated[AsyncSession, Depends(get_session)],
     device_id: str,
@@ -299,11 +299,44 @@ async def revoke_webauthn_credential(
         WebAuthnCredential.is_revoked.is_(False),
     )
     remaining = (await db.execute(remaining_stmt)).scalars().all()
-    await UserRepository.update_user({"passkey_enabled": len(remaining) > 0}, user, db)
 
     await db.commit()
 
     return {
         "status": "revoked",
+        "active_credential_ids": [c.credential_id_b64 for c in remaining],
+    }
+
+@router.post("/webauthn/credentials/{credential_id}/enable")
+async def enable_webauthn_credential(
+    credential_id: str,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    current_user=Depends(get_current_user),
+):
+    user_id = cast(UUID, current_user.user_id)
+    user = await UserRepository.get_user_by_id(user_id, db)
+    if not user:
+        raise HTTPException(status_code=404, detail="Credential not found")
+    stmt = select(WebAuthnCredential).where(
+        WebAuthnCredential.user_id == user_id,
+        WebAuthnCredential.credential_id_b64 == credential_id,
+        WebAuthnCredential.is_revoked.is_(False),
+    )
+    cred = (await db.execute(stmt)).scalar_one_or_none()
+    if not cred:
+        raise HTTPException(status_code=404, detail="Credential not found")
+
+    cred.is_revoked = False
+
+    remaining_stmt = select(WebAuthnCredential).where(
+        WebAuthnCredential.user_id == user_id,
+        WebAuthnCredential.is_revoked.is_(False),
+    )
+    remaining = (await db.execute(remaining_stmt)).scalars().all()
+
+    await db.commit()
+
+    return {
+        "status": "enabled",
         "active_credential_ids": [c.credential_id_b64 for c in remaining],
     }
