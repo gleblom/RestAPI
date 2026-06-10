@@ -3,3 +3,4 @@ from .dictionaries import Role, Category, RoleCategory, Company, Unit, UnitCompa
 from .documents import Document, DocumentUnit, DocumentVersion, DocumentApproval, Notification
 from .approval_routes import ApprovalRoute, RouteNode, RouteEdge
 from .webauthn import WebAuthnChallenge, WebAuthnCredential
+from .push_notifications import Device

@@ -29,6 +29,9 @@ class WebAuthnCredential(Base):
 
     is_platform: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    
+    device_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    device_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

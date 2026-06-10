@@ -1,7 +1,11 @@
+from enum import StrEnum
+import enum
 import uuid
 
-from sqlalchemy import UUID, DateTime, Index, Integer, String, Boolean, ForeignKey, UniqueConstraint, func
+from sqlalchemy import UUID, DateTime, Enum, Index, Integer, String, Boolean, ForeignKey, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from sqlalchemy.dialects.postgresql import JSONB
 
 from src.database import Base
 
@@ -31,6 +35,8 @@ class Document(Base):
     approvals = relationship("DocumentApproval", back_populates="document", lazy="raise")
 
     document_units = relationship("DocumentUnit", back_populates="document", lazy="raise")
+    
+    tokens = relationship("DocumentToken", back_populates="document", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_documents_search", "status_id", "category_id", "created_at"),
@@ -105,6 +111,17 @@ class DocumentApproval(Base):
     def __repr__(self):
         return f"<DocumentApproval(id={self.id}, version_id={self.version_id}, approver_id={self.approver_id}, step_index={self.step_index}, is_approved={self.is_approved})>"
 
+class NotificationStatus(str, enum.Enum):
+    pending = "pending"
+    sent = "sent"
+    failed = "failed"
+    
+notification_status_type = Enum(
+    NotificationStatus,
+    name="notification_status",
+    create_type=False,   
+)
+    
 class Notification(Base):
     __tablename__ = "notifications"
 
@@ -113,17 +130,51 @@ class Notification(Base):
     user_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     document_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="SET NULL"), nullable=True)
 
-    message: Mapped[str] = mapped_column(String, nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    body: Mapped[str] = mapped_column(String, nullable=False)
+    
+    data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    
+    status: Mapped[NotificationStatus] = mapped_column(
+        notification_status_type,
+        nullable=False,
+        server_default=NotificationStatus.pending.value,
+    )
+    
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    sent_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user = relationship("User", back_populates="notifications", lazy="raise")
     document = relationship("Document", lazy="raise")
 
     __table_args__ = (
         Index("ix_notifications_user", "user_id", "is_read"),
+        Index("ix_notifications_user_status", "user_id", "status"),
     )
     
     def __repr__(self):
-        return f"<Notification(id={self.id}, user_id={self.user_id}, message={self.message}, is_read={self.is_read}, created_at={self.created_at})>"
+        return f"<Notification(id={self.id}, user_id={self.user_id}, message={self.title}, is_read={self.is_read}, created_at={self.created_at})>"
+    
+class DocumentToken(Base):
+    __tablename__ = "document_tokens" 
+    
+    id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    document_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+    
+    
+    token_hash: Mapped[str] = mapped_column(String, nullable=False)
+    expires_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False)
+    
+    created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    
+    document = relationship("Document", back_populates="tokens")
+    
+    __table_args__ = (
+        Index("ix_document_tokens_document_expires", "document_id", "expires_at"),
+    )
+    
+    def __repr__(self):
+       return f"<DocumentToken(id={self.id}, document_id={self.document_id}, created_at={self.created_at}, expires_at={self.expires_at})>"

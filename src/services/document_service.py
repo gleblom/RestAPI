@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, cast
 from uuid import UUID
 
@@ -7,14 +7,16 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.exceptions import InvalidToken
+from src.repositories.document_token_repository import DocumentTokenRepository
 from src.schemas.approvals import DocumentApprovalReadDTO
 from src.config.main import Config
 from src.database import get_session
 from src.models.dictionaries import UnitCompany
-from src.models.documents import Document, DocumentUnit, DocumentVersion
+from src.models.documents import Document, DocumentToken, DocumentUnit, DocumentVersion
 from src.repositories.document_repository import DocumentRepository
 from src.schemas.documents import DocumentCreateDTO, DocumentVersionCreateDTO, DocumentVersionReadDTO
-from src.security import CurrentUser
+from src.security import CurrentUser, create_token, hash_token
 
 
 from src.services.document_storage_service import upload_document_version_to_storage
@@ -104,7 +106,7 @@ async def get_document_service(
     db: Annotated[AsyncSession, Depends(get_session)],
     current_user: CurrentUser,
     document_id: UUID,
-):
+) :
     document = await DocumentRepository.get_document_by_id(document_id, db)
     if not document:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
@@ -194,13 +196,13 @@ async def list_documents_service(
     )
 
 async def get_document_versions_service(db: AsyncSession, current_user: CurrentUser, document_id: UUID):
-    document = get_document_service(db, current_user, document_id)
+    document = await get_document_service(db, current_user, document_id)
     if document:
         versions = await DocumentRepository.get_document_versions(document_id, db)
         return versions
 
 async def get_document_approvals_service(db: AsyncSession, current_user: CurrentUser, document_id: UUID):
-    document = get_document_service(db, current_user, document_id)
+    document = await get_document_service(db, current_user, document_id)
     if document:
         approvals = await DocumentRepository.get_approvals_by_doc(document_id, db)
         return approvals
@@ -212,7 +214,7 @@ async def get_document_approval_service(
     version_id: int,
     step_index: int
     ):
-    document = get_document_service(db, current_user, document_id)
+    document = await get_document_service(db, current_user, document_id)
     if document:
         approval = await DocumentRepository.get_document_approval_by_step(
             document_id = document_id,
@@ -271,5 +273,78 @@ async def upload_document_version_service(
     except SQLAlchemyError as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail="Database error while saving document version") from e
-        
     
+async def share_link_document_service(db: AsyncSession, current_user: CurrentUser, document_id: UUID):
+
+    document = await DocumentRepository.get_document_by_id(document_id, db)
+    if not document:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    
+    is_author = document.author_id == current_user.user_id
+    is_published = document.status_id == PUBLISHED_STATUS_ID
+
+    accessible_units = await db.execute(
+        select(DocumentUnit.unit_id)
+        .join(UnitCompany, UnitCompany.unit_id == DocumentUnit.unit_id)
+        .where(
+            DocumentUnit.document_id == document_id,
+            UnitCompany.company_id == current_user.company_id,
+        )
+    )
+    accessible_unit_ids = set(accessible_units.scalars().all())
+
+    if not (is_author or is_published or current_user.unit_id in accessible_unit_ids):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Document is not available")
+
+    
+    token_value, token = create_token()
+    
+    document_token = DocumentToken(
+        document_id = document.id,
+        token_hash = token,
+        expires_at = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
+    )
+    
+    try:
+        await DocumentTokenRepository.create_token(document_token, db)
+        
+        await db.commit()
+        
+        share_link = f"/api/documents/share-link-confirm?token={token_value}"
+        
+        return {"share_link": share_link}
+    except SQLAlchemyError as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Database error while creating share link") from e   
+
+async def confirm_share_link_document_service(token: str, current_user: CurrentUser, db: AsyncSession):
+    token_hash = hash_token(token)
+    
+    share_token = await DocumentTokenRepository.get_token(token_hash, db)
+    if not share_token:
+        raise InvalidToken("Invalid or expired share token")
+        
+    if await DocumentTokenRepository.is_expired(share_token, db):
+        raise InvalidToken("Invalid or expired share token")
+    
+    document = await DocumentRepository.get_document_by_id(cast(UUID, share_token.document_id), db)
+    if not document:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    
+    is_author = document.author_id == current_user.user_id
+    is_published = document.status_id == PUBLISHED_STATUS_ID
+
+    accessible_units = await db.execute(
+        select(DocumentUnit.unit_id)
+        .join(UnitCompany, UnitCompany.unit_id == DocumentUnit.unit_id)
+        .where(
+            DocumentUnit.document_id == cast(UUID, share_token.document_id),
+            UnitCompany.company_id == current_user.company_id,
+        )
+    )
+    accessible_unit_ids = set(accessible_units.scalars().all())
+
+    if not (is_author or is_published or current_user.unit_id in accessible_unit_ids):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Document is not available")
+    
+    return document

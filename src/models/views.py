@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from pydantic import ConfigDict
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import UUID, Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -31,7 +32,6 @@ class MVDocument(Base):
     unit_name: Mapped[int] = mapped_column(Integer)
     
     first_name: Mapped[str] = mapped_column(String)
-    second_name: Mapped[str] = mapped_column(String)
     second_name: Mapped[str] = mapped_column(String)
     third_name: Mapped[str] = mapped_column(String)
 
@@ -118,8 +118,11 @@ class MVNotification(Base):
 
     document_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True))
     document_title : Mapped[str] = mapped_column(String)
+    
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
-    message : Mapped[str] = mapped_column(String)
+    body : Mapped[str] = mapped_column(String)
     is_read: Mapped[bool] = mapped_column(Boolean)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -142,7 +145,6 @@ class VUser(Base):
     otp_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     otp_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     
-    passkey_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     
     user_created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     user_updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

@@ -62,7 +62,7 @@ class NotificationReadDTO(BaseModel):# @IgnoreException
     id: int
     user_id: UUID
     document_id: Optional[UUID]
-    message: str
+    title: str
     is_read: bool
     created_at: datetime
 

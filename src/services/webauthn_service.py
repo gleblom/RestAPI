@@ -29,11 +29,11 @@ from webauthn.helpers.structs import (
 )
 from webauthn.helpers.exceptions import InvalidAuthenticationResponse
 
+from src.schemas.webauthn import PasskeyStatusDTO
 from src.config import Config
-from src.models import User
 from src.models.webauthn import WebAuthnChallenge, WebAuthnCredential
 from src.repositories.user_repository import UserRepository
-from src.security import AuthLevel, create_access_token
+from src.security import AuthLevel, CurrentUser, create_access_token
 from src.services.user_service import create_token, get_refresh_token_expire_time
 from src.models.users import RefreshToken
 from src.repositories.refresh_token import RefreshTokenRepository
@@ -147,7 +147,7 @@ async def generate_webauthn_registration_options_service(
 
 
 async def finish_webauthn_registration_service(
-    current_user,
+    current_user: CurrentUser,
     payload: dict,
     db: AsyncSession,
 ) -> dict:
@@ -165,7 +165,7 @@ async def finish_webauthn_registration_service(
             credential=credential,
             expected_challenge=expected_challenge,
             expected_rp_id=settings.webauthn_rp_id,
-            expected_origin=settings.webauthn_origin,
+            expected_origin=settings.webauthn_origins,
             require_user_verification=True,
         )
     except InvalidAuthenticationResponse as e:
@@ -173,7 +173,8 @@ async def finish_webauthn_registration_service(
 
     credential_id_b64 = _b64url_encode(verification.credential_id)
     public_key_b64 = _b64url_encode(verification.credential_public_key)
-
+    device_id=payload.get("device_id"),
+    device_name=payload.get("device_name"),
     db.add(
         WebAuthnCredential(
             user_id=user.id,
@@ -182,13 +183,15 @@ async def finish_webauthn_registration_service(
             sign_count=verification.sign_count,
             transports_json=payload["credential"].get("response", {}).get("transports", []),
             is_platform=payload["credential"].get("authenticatorAttachment") == "platform",
+            device_id=payload.get("device_id"),
+            device_name=payload.get("device_name"),
         )
     )
-    await UserRepository.update_user(
-        {"passkey_enabled": True},
-        user,
-        db
-    )
+    # await UserRepository.update_user(
+    #     {"passkey_enabled": True},
+    #     user,
+    #     db
+    # )
 
     await _consume_challenge(db, challenge_row)
     await db.commit()
@@ -255,7 +258,7 @@ async def finish_webauthn_login_service(
             credential=credential,
             expected_challenge=expected_challenge,
             expected_rp_id=settings.webauthn_rp_id,
-            expected_origin=settings.webauthn_origin,
+            expected_origin=settings.webauthn_origins,
             credential_public_key=base64url_to_bytes(webauthn_cred.public_key_b64),
             credential_current_sign_count=webauthn_cred.sign_count,
             require_user_verification=True,
@@ -287,3 +290,29 @@ async def finish_webauthn_login_service(
 
     await db.commit()
     return access_token, refresh_token_value
+
+async def get_passkey_status_service(
+    user_id: UUID,
+    device_id: str,
+    db: AsyncSession,
+) -> PasskeyStatusDTO:
+    stmt = select(WebAuthnCredential).where(
+        WebAuthnCredential.user_id == user_id,
+        WebAuthnCredential.is_revoked.is_(False),
+    )
+    creds = (await db.execute(stmt)).scalars().all()
+
+    active_count = len(creds)
+    current_device_has_passkey = any((c.device_id == device_id) for c in creds)
+
+    state = 'None'
+    if active_count == 0:
+        state = "disabled"
+    elif current_device_has_passkey:
+        state = "enabled_this_device"
+        
+    return PasskeyStatusDTO(
+        state=state,
+        active_count=active_count,
+        current_device_has_passkey=current_device_has_passkey,
+    )

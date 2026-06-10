@@ -80,7 +80,6 @@ class UserFullDTO(BaseModel): # @IgnoreException
     otp_enabled: Optional[bool]
     otp_verified: Optional[bool]
     
-    passkey_enabled: Optional[bool]
     
     user_created_at: Optional[datetime]
     user_updated_at: Optional[datetime]

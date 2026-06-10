@@ -76,7 +76,7 @@ async def delete_role(
     return await delete_role_service(db, current_user, role_id)
 
 
-@router.get("/units", response_model=list[UnitReadDTO], dependencies=[Depends(role_checker)])
+@router.get("/units", response_model=list[UnitReadDTO])
 async def get_units(
     db: Annotated[AsyncSession, Depends(get_session)],
     current_user: CurrentUser,
@@ -131,7 +131,7 @@ async def detach_unit_from_company(
 ):
     return await detach_unit_from_company_service(db, current_user, unit_id, company_id)
 
-@router.get("/role_categories/{role_id}", response_model=list[RoleCategoryReadDTO], status_code=status.HTTP_201_CREATED, dependencies=[Depends(role_checker)])
+@router.get("/role_categories/{role_id}", response_model=list[RoleCategoryReadDTO], status_code=status.HTTP_201_CREATED)
 async def get_role_category(
     db: Annotated[AsyncSession, Depends(get_session)], 
     current_user: CurrentUser, 

@@ -138,7 +138,15 @@ class DocumentRepository:
             conditions.append(MVDocument.status_id == 1)
             query = select(MVDocument).join(DocumentUnit, DocumentUnit.document_id == MVDocument.document_id).where(DocumentUnit.unit_id == unit_id).distinct()
         elif mode == "incoming":
-            query = select(MVDocument).join(Notification, Notification.document_id == MVDocument.document_id).where(Notification.user_id == user_id)
+            query = select(
+                MVDocument,
+                Notification
+                ).select_from(MVDocument).join(
+                    Notification, 
+                    Notification.document_id == MVDocument.document_id, full=True
+                    ).where(
+                        Notification.user_id == user_id
+                        )
 
         else:
             conditions.append(MVDocument.unit_id == unit_id)
@@ -160,6 +168,7 @@ class DocumentRepository:
             query = query.where(and_(*conditions))
 
         result = await db.execute(query)
+
         return result.scalars().all()
     
 

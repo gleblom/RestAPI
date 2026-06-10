@@ -2,16 +2,18 @@ import logging
 from typing import Annotated, cast
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import EmailStr
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 
+from src.models.webauthn import WebAuthnCredential
 from src.schemas.webauthn import WebAuthnFinishDTO, WebAuthnLoginOptionsDTO
-from src.services.webauthn_service import finish_webauthn_login_service, finish_webauthn_registration_service, generate_webauthn_login_options_service, generate_webauthn_registration_options_service
+from src.services.webauthn_service import finish_webauthn_login_service, finish_webauthn_registration_service, generate_webauthn_login_options_service, generate_webauthn_registration_options_service, get_passkey_status_service
 from src.services.otp_service import confirm_otp_service, disable_otp_service, generate_otp_service, validate_otp_service
 from src.database import get_session
 from src.exceptions import AlreadyExists, Authentication
@@ -233,4 +235,75 @@ async def webauthn_login_finish(
         "access_token": access_token,
         "token_type": "bearer",
         "refresh_token": refresh_token,
+    }
+
+@router.get("/webauthn/status/{device_id}")
+async def webauthn_status(
+    db: Annotated[AsyncSession, Depends(get_session)],
+    device_id: str,
+    current_user=Depends(get_current_user),
+):
+    user_id = cast(UUID, current_user.user_id)
+    return await get_passkey_status_service(user_id, device_id, db)
+
+
+@router.get("/webauthn/credentials")
+async def webauthn_credentials(
+    db: Annotated[AsyncSession, Depends(get_session)],
+    current_user=Depends(get_current_user),
+    
+):
+    user_id = cast(UUID, current_user.user_id)
+    stmt = select(WebAuthnCredential).where(
+        WebAuthnCredential.user_id == user_id,
+        WebAuthnCredential.is_revoked.is_(False),
+    ).order_by(WebAuthnCredential.last_used_at.desc().nullslast(), WebAuthnCredential.created_at.desc())
+    creds = (await db.execute(stmt)).scalars().all()
+
+    return [
+        {
+            "credential_id": c.credential_id_b64,
+            "device_id": c.device_id,
+            "device_name": c.device_name,
+            "is_platform": c.is_platform,
+            "created_at": c.created_at,
+            "last_used_at": c.last_used_at,
+        }
+        for c in creds
+    ]
+
+
+@router.post("/webauthn/credentials/{credential_id}/revoke")
+async def revoke_webauthn_credential(
+    credential_id: str,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    current_user=Depends(get_current_user),
+):
+    user_id = cast(UUID, current_user.user_id)
+    user = await UserRepository.get_user_by_id(user_id, db)
+    if not user:
+        raise HTTPException(status_code=404, detail="Credential not found")
+    stmt = select(WebAuthnCredential).where(
+        WebAuthnCredential.user_id == user_id,
+        WebAuthnCredential.credential_id_b64 == credential_id,
+        WebAuthnCredential.is_revoked.is_(False),
+    )
+    cred = (await db.execute(stmt)).scalar_one_or_none()
+    if not cred:
+        raise HTTPException(status_code=404, detail="Credential not found")
+
+    cred.is_revoked = True
+
+    remaining_stmt = select(WebAuthnCredential).where(
+        WebAuthnCredential.user_id == user_id,
+        WebAuthnCredential.is_revoked.is_(False),
+    )
+    remaining = (await db.execute(remaining_stmt)).scalars().all()
+    await UserRepository.update_user({"passkey_enabled": len(remaining) > 0}, user, db)
+
+    await db.commit()
+
+    return {
+        "status": "revoked",
+        "active_credential_ids": [c.credential_id_b64 for c in remaining],
     }

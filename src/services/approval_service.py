@@ -7,6 +7,9 @@ from pydantic import Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.celery_app import celery_app
+import celery
+
 from src.database import get_session
 from src.models.documents import DocumentApproval, Notification
 from src.repositories.document_repository import DocumentRepository
@@ -14,6 +17,8 @@ from src.repositories.notification_repository import NotificationRepository
 from src.repositories.route_repository import RouteRepository
 from src.schemas.documents import DocumentSubmitDTO
 from src.security import CurrentUser
+from src.tasks.push import process_notification_task
+
 
 PUBLISHED_STATUS_ID = 1
 DRAFT_STATUS_ID = 2
@@ -84,10 +89,11 @@ async def submit_document_service(
         )
 
     try:
+        
         document.route_id = route.id
         document.current_step_index = start_node.step_index
         document.status_id = IN_PROGRESS_STATUS_ID
-
+            
         await DocumentRepository.create_document_approval(
             DocumentApproval(
                 version_id=latest_version.id,
@@ -101,22 +107,31 @@ async def submit_document_service(
         )
 
 
-        notification = Notification(
-                user_id=start_node.approver_id,
-                document_id=document.id,
-                message=f"Document '{document.title}' requires your approval at step {start_node.step_index}",
+        notification = await NotificationRepository.create_notification(
+                Notification(
+                    user_id=start_node.approver_id,
+                    document_id=document.id,
+                    title="Требуется согласование",
+                    body=f"Документ '{document.title}' ожидает вашего согласования на шаге {start_node.step_index}",
+                    status="pending",
+                    data={
+                        "event_type": "approval_required",
+                        "document_id": str(document.id),
+                        "step_index": str(start_node.step_index),
+                    },
+                ), db
             )
 
-        await NotificationRepository.create_notification(notification, db)
-
-        await db.commit()
         await db.refresh(document)
+        await db.commit()
+        
+        process_notification_task.delay(notification.id)
         return document
     except SQLAlchemyError as e:
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error while submitting document",
+            detail=str(e),
         ) from e
 
 
@@ -176,64 +191,98 @@ async def approve_document_service(
         )
 
     try:
-        if existing is None:
-            await DocumentRepository.create_document_approval(
-                DocumentApproval(
-                    version_id=latest_version.id,
-                    document_id=document.id,
-                    approver_id=current_user.user_id,
-                    step_index=current_node.step_index,
-                    is_approved=True,
-                    comment=None,
-                ),
-                db,
-            )
-        else:
-            existing.is_approved = True
-
-        if next_nodes:
-            next_node = next_nodes[0]
-            document.current_step_index = next_node.step_index
-            document.status_id = IN_PROGRESS_STATUS_ID
-
-            await DocumentRepository.create_document_approval(
-                DocumentApproval(
-                    version_id=latest_version.id,
-                    document_id=document.id,
-                    approver_id=next_node.approver_id,
-                    step_index=next_node.step_index,
-                    is_approved=None,
-                    comment=None,
-                ),
-                db,
-            )
-
-            notification = Notification(
-                user_id=next_node.approver_id,
-                document_id=document.id,
-                message=f"Document '{document.title}' requires your approval at step {next_node.step_index}",
-            )
-
-            await NotificationRepository.create_notification(notification, db)
-        else:
-            document.status_id = PUBLISHED_STATUS_ID
-
-            db.add(
-                Notification(
-                    user_id=document.author_id,
-                    document_id=document.id,
-                    message=f"Document '{document.title}' has been fully approved and published",
+            if existing is None:
+                await DocumentRepository.create_document_approval(
+                 DocumentApproval(
+                        version_id=latest_version.id,
+                        document_id=document.id,
+                        approver_id=current_user.user_id,
+                        step_index=current_node.step_index,
+                        is_approved=True,
+                        comment=None,
+                    ),
+                    db,
                 )
+            else:
+                existing.is_approved = True
+                await NotificationRepository.delete_pending_approval_notifications(
+                    db,
+                    user_id=cast(UUID, current_user.user_id),
+                    document_id= cast(UUID, document.id),
+                    step_index=current_node.step_index,
             )
 
-        await db.commit()
-        await db.refresh(document)
-        return document
+            if next_nodes:
+                next_node = next_nodes[0]
+                document.current_step_index = next_node.step_index
+                document.status_id = IN_PROGRESS_STATUS_ID
+
+                await DocumentRepository.create_document_approval(
+                    DocumentApproval(
+                        version_id=latest_version.id,
+                        document_id=document.id,
+                        approver_id=next_node.approver_id,
+                        step_index=next_node.step_index,
+                        is_approved=None,
+                        comment=None,
+                    ),
+                    db,
+                )
+
+                notification = await NotificationRepository.create_notification(
+                    Notification(
+                        user_id=next_node.approver_id,
+                        document_id=document.id,
+                        title="Требуется согласование",
+                        body=f"Документ '{document.title}' ожидает вашего согласования на шаге {next_node.step_index}",
+                        status="pending",
+                        data={
+                            "event_type": "approval_required",
+                            "document_id": str(document.id),
+                            "step_index": str(next_node.step_index),
+                        },
+                    ), db
+                )
+      
+            else:
+                
+                await NotificationRepository.delete_pending_approval_notifications(
+                    db,
+                    user_id=cast(UUID, current_user.user_id),
+                    document_id= cast(UUID, document.id),
+                    step_index=current_node.step_index,)
+                document.status_id = PUBLISHED_STATUS_ID
+                
+
+                
+                notification = await NotificationRepository.create_notification(
+                    Notification(
+                        user_id=document.author_id,
+                        document_id=document.id,
+                        title="Документ опубликован",
+                        body=f"Документ '{document.title}' полностью прошёл процесс согласования и был опубликован",
+                        status="pending",
+                        data={
+                            "event_type": "document_published",
+                            "document_id": str(document.id),
+                        },
+                    ), db
+                )
+  
+
+
+
+
+            await db.refresh(document)
+            await db.commit()
+            
+            process_notification_task.delay(notification.id)
+            return document
     except SQLAlchemyError as e:
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error while approving document",
+            detail=str(e),
         ) from e
 
 
@@ -288,39 +337,46 @@ async def reject_document_service(
     )
 
     try:
-        if existing is None:
-            await DocumentRepository.create_document_approval(
-                DocumentApproval(
-                    version_id=latest_version.id,
-                    document_id=document.id,
-                    approver_id=current_user.user_id,
-                    step_index=current_node.step_index,
-                    is_approved=False,
-                    comment=comment.strip(),
-                ),
-                db,
+            if existing is None:
+                await DocumentRepository.create_document_approval(
+                    DocumentApproval(
+                        version_id=latest_version.id,
+                        document_id=document.id,
+                        approver_id=current_user.user_id,
+                        step_index=current_node.step_index,
+                        is_approved=False,
+                        comment=comment.strip(),
+                    ),
+                    db,
+                )
+            else:
+                existing.is_approved = False
+                existing.comment = comment.strip()
+                
+            document.status_id = RETURNED_STATUS_ID
+            document.current_step_index = current_node.step_index
+
+            notification = await NotificationRepository.create_notification(
+                    Notification(
+                        user_id=document.author_id,
+                        document_id=document.id,
+                        title="Документ отклонен",
+                        body=f"Документ '{document.title}' был отклонен. Причина: {comment.strip()}",
+                        status="pending",
+                        data={
+                            "event_type": "document_rejected",
+                            "document_id": str(document.id),
+                            "reason": comment.strip(),
+                        }, 
+                    ), db
             )
-        else:
-            existing.is_approved = False
-            existing.comment = comment.strip()
-
-        document.status_id = RETURNED_STATUS_ID
-        document.current_step_index = current_node.step_index
-
-        notification = Notification(
-                user_id=document.author_id,
-                document_id=document.id,
-                message=f"Document '{document.title}' was rejected: {comment.strip()}",
-            )
-
-        await NotificationRepository.create_notification(notification, db)
-
-        await db.commit()
-        await db.refresh(document)
-        return document
+            process_notification_task.delay(notification.id)
+            await db.commit()
+            await db.refresh(document)
+            return document
     except SQLAlchemyError as e:
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error while rejecting document",
+            detail=str(e),
         ) from e

@@ -20,6 +20,7 @@ from src.schemas.documents import (
 from src.security import CurrentUser
 from src.services.approval_service import approve_document_service, reject_document_service, submit_document_service
 from src.services.document_service import (
+    confirm_share_link_document_service,
     create_document_service,
     create_document_units_service,
     create_document_version_service,
@@ -28,6 +29,7 @@ from src.services.document_service import (
     get_document_service,
     get_document_versions_service,
     list_documents_service,
+    share_link_document_service,
     upload_document_version_service,
 )
 from src.services.document_storage_service import get_minio_object_stream, get_presigned_download_url
@@ -217,4 +219,18 @@ async def create_document_units(
 ):
     print(request.body)
     return await create_document_units_service(current_user, db, unit_ids, document_id)
+    
+@router.post("/{document_id}/share-link")
+async def create_share_link(
+    document_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    current_user: CurrentUser):
+    return await share_link_document_service(db, current_user, document_id)
+
+@router.post("/share-link-confirm", response_model=DocumentReadDTO)
+async def confirm_share_link(
+    token: str, 
+    db: Annotated[AsyncSession, Depends(get_session)],
+    current_user: CurrentUser):
+    return await confirm_share_link_document_service(token, current_user, db)
     

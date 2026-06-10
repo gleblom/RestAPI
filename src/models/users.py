@@ -29,8 +29,6 @@ class User(Base):
     otp_failed_attempts: Mapped[int] = mapped_column(Integer, nullable=True)
     otp_locked_until: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=True)
     
-    passkey_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
-    
     company = relationship("Company", back_populates="users")
 
     tokens = relationship("UserToken", back_populates="user", cascade="all, delete-orphan")
@@ -47,6 +45,16 @@ class User(Base):
     notifications = relationship("Notification", back_populates="user")
     
     webauthn_credentials = relationship("WebAuthnCredential", back_populates="user", cascade="all, delete-orphan")
+    
+    devices = relationship("Device", back_populates="user", cascade="all, delete-orphan")
+    
+    notification_settings = relationship(
+        "UserNotificationSettings",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+        )
+
     
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, is_active={self.is_active}, is_email_verified={self.is_email_verified})>"
@@ -90,6 +98,7 @@ class RefreshToken(Base):
     parent_jti: Mapped[UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
     user = relationship("User", back_populates="refresh_tokens")
+    
 
     __table_args__ = (
         Index("ix_refresh_tokens_user", "user_id", "is_revoked"),
