@@ -27,7 +27,7 @@ class Config(BaseSettings):    # @IgnoreException
    
    firebase_service_account_json: str
    
-   redis_url: str = 'redis://:redis_password_12345678a!@127.0.0.1:6379/0'
+   redis_url: str = 'redis://:redis_password_12345678a!@srv-captain--redis:6379/0'
    
    access_token_expire_minutes: int = 15
    refresh_token_expire_days: int = 30
