@@ -19,7 +19,7 @@ class DocumentReadDTO(BaseModel):# @IgnoreException
     title: str = Field(min_length=1, max_length=32)
     current_step_index: int
     status_id: int = Field(ge=1, le=4)
-    category_id: int = Field(ge=1, le=9)
+    category_id: int
     route_id: Optional[int] = None
     author_id: UUID
     created_at: datetime
