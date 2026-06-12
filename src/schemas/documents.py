@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class DocumentCreateDTO(BaseModel):# @IgnoreException
     title: str = Field(min_length=1, max_length=32)
-    category_id: int = Field(ge=1, le=9)
+    category_id: int
     unit_id: int
     expires_at: Optional[datetime] = None
 
