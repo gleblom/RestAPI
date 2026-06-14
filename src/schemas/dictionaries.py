@@ -22,10 +22,16 @@ class CompanyUpdateDTO(BaseModel):# @IgnoreException
 
 class RoleCreateDTO(BaseModel):# @IgnoreException
     name: str
+    level: int
+    unit_id: int | None = None
+    category_ids: list[int] = []
 
 
 class RoleUpdateDTO(BaseModel):# @IgnoreException
     name: Optional[str] = None
+    level: Optional[int] = None
+    unit_id: Optional[int] = None
+    category_ids: Optional[list[int]] = None
 
 
 class RoleReadDTO(BaseModel):# @IgnoreException
@@ -34,6 +40,9 @@ class RoleReadDTO(BaseModel):# @IgnoreException
     id: int
     name: str
     company_id: UUID | None = None
+    level: int
+    sort_order: int
+    unit_id: int | None = None
 
 
 class UnitCreateDTO(BaseModel):# @IgnoreException

@@ -2,7 +2,7 @@ from sqlalchemy import UUID, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.models.users import User
+from src.models.users import User, Profile
 from src.models.approval_routes import ApprovalRoute, RouteEdge, RouteNode
 
 class RouteRepository:
@@ -97,7 +97,9 @@ class RouteRepository:
                     ).options(
                         selectinload(ApprovalRoute.nodes)
                         .selectinload(RouteNode.approver)
-                        .selectinload(User.profile), 
+                        .selectinload(User.profile)
+                        .selectinload(Profile.role)
+                        .selectinload(Profile.unit),
                         selectinload(ApprovalRoute.edges)))
         
         return result.scalar_one_or_none()

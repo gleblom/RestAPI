@@ -66,6 +66,8 @@ class RouteGraphNodeDTO(BaseModel): # @IgnoreException
     is_start: bool
     is_terminal: bool
     level: int
+    approver_role_name: Optional[str] = None
+    approver_unit_name: Optional[str] = None
 
 
 class RouteGraphEdgeDTO(BaseModel): # @IgnoreException

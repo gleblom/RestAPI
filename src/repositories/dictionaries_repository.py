@@ -48,6 +48,22 @@ class DictionariesRepository:
         return result.scalar_one_or_none() is not None
 
     @staticmethod
+    async def next_sort_order(company_id: UUID, level: int, db: AsyncSession) -> int:
+        result = await db.execute(
+            select(func.max(Role.sort_order)).where(Role.company_id == company_id, Role.level == level)
+        )
+        max_value = result.scalar_one_or_none()
+        return (max_value or 0) + 1
+
+    @staticmethod
+    async def role_with_level_exists(company_id: UUID, level: int, db: AsyncSession, exclude_role_id: int | None = None) -> bool:
+        q = select(Role.id).where(Role.company_id == company_id, Role.level == level)
+        if exclude_role_id is not None:
+            q = q.where(Role.id != exclude_role_id)
+        result = await db.execute(q)
+        return result.scalar_one_or_none() is not None
+
+    @staticmethod
     async def role_is_used(role_id: int, db: AsyncSession) -> bool:
         result = await db.execute(select(Profile.id).where(Profile.role_id == role_id))
         return result.scalar_one_or_none() is not None

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.approval_routes import ApprovalRoute, RouteEdge, RouteNode
 from src.repositories.route_repository import RouteRepository
+from src.repositories.profile_repository import ProfileRepository
 from src.schemas.routes import (
     ApprovalRouteCreateDTO,
     ApprovalRouteReadDTO,
@@ -138,6 +139,30 @@ async def add_node_service(db: AsyncSession, current_user: CurrentUser, route_id
     if any(node.step_index == payload.step_index for node in route.nodes):
         raise HTTPException(status_code=409, detail="Step index already exists in this route")
 
+    if any(node.approver_id == payload.approver_id for node in route.nodes):
+        raise HTTPException(status_code=409, detail="Approver already exists in this route")
+
+    # load approver profile and role/unit info
+    profile = await ProfileRepository.get_profile(payload.approver_id, db)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Approver not found")
+    if profile.company_id != route.company_id:
+        raise HTTPException(status_code=403, detail="Approver must belong to the same company as the route")
+
+    if not profile.role:
+        raise HTTPException(status_code=400, detail="Approver must have a role with level/sort_order")
+
+    # disallow roles that are administrative clerks/admins from being approvers (level 90, sort_order 1)
+    if profile.role.level == 90 and profile.role.sort_order == 1:
+        raise HTTPException(status_code=400, detail="This role cannot be assigned to approval steps")
+
+    # disallow duplicate positions (same level and sort_order)
+    for node in route.nodes:
+        if node.approver and node.approver.profile and node.approver.profile.role:
+            existing_role = node.approver.profile.role
+            if existing_role.level == profile.role.level and existing_role.sort_order == profile.role.sort_order:
+                raise HTTPException(status_code=409, detail="A role with this level and order already exists in the route")
+
     try:
         node = await RouteRepository.create_node(
             RouteNode(route_id=route_id, approver_id=payload.approver_id, step_index=payload.step_index),
@@ -173,7 +198,28 @@ async def update_node_service(
         node.step_index = payload.step_index
 
     if payload.approver_id is not None:
-        node.approver_id =  payload.approver_id  # type: ignore
+        # check duplicate approver in route
+        if any(n.id != node.id and n.approver_id == payload.approver_id for n in route.nodes):
+            raise HTTPException(status_code=409, detail="Approver already exists in this route")
+
+        profile = await ProfileRepository.get_profile(payload.approver_id, db)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Approver not found")
+        if profile.company_id != route.company_id:
+            raise HTTPException(status_code=403, detail="Approver must belong to the same company as the route")
+        if not profile.role:
+            raise HTTPException(status_code=400, detail="Approver must have a role with level/sort_order")
+        if profile.role.level == 90 and profile.role.sort_order == 1:
+            raise HTTPException(status_code=400, detail="This role cannot be assigned to approval steps")
+
+        # disallow duplicate positions
+        for n in route.nodes:
+            if n.id != node.id and n.approver and n.approver.profile and n.approver.profile.role:
+                existing_role = n.approver.profile.role
+                if existing_role.level == profile.role.level and existing_role.sort_order == profile.role.sort_order:
+                    raise HTTPException(status_code=409, detail="A role with this level and order already exists in the route")
+
+        node.approver_id = payload.approver_id  # type: ignore
 
     try:
         await db.commit()
@@ -230,6 +276,37 @@ async def add_edge_service(db: AsyncSession, current_user: CurrentUser, route_id
         nodes = route.nodes
         edges = route.edges + [edge]
         _validate_acyclic(nodes, edges)
+
+        # validate sequential chain: indegree/outdegree must be <=1 and route must be a single linear chain
+        incoming = defaultdict(int)
+        outgoing = defaultdict(int)
+        for e in edges:
+            outgoing[e.from_node_id] += 1
+            incoming[e.to_node_id] += 1
+
+        # every node must have indegree<=1 and outdegree<=1
+        for n in nodes:
+            if incoming[n.id] > 1 or outgoing[n.id] > 1:
+                raise HTTPException(status_code=400, detail="Route must be strictly sequential (no branching allowed)")
+
+        # require at least 2 nodes
+        if len(nodes) < 2:
+            raise HTTPException(status_code=400, detail="Route must contain at least 2 steps")
+
+        # check role ordering for each edge
+        node_by_id = {n.id: n for n in nodes}
+        for e in edges:
+            a = node_by_id.get(e.from_node_id)
+            b = node_by_id.get(e.to_node_id)
+            if not a or not b or not a.approver or not b.approver:
+                raise HTTPException(status_code=400, detail="Invalid route nodes")
+            role_a = a.approver.profile.role if a.approver.profile else None
+            role_b = b.approver.profile.role if b.approver.profile else None
+            if not role_a or not role_b:
+                raise HTTPException(status_code=400, detail="Approver roles must have level and order defined")
+
+            if role_b.level < role_a.level or (role_b.level == role_a.level and role_b.sort_order <= role_a.sort_order):
+                raise HTTPException(status_code=400, detail="Approver order must go from lower to higher (by level then sort_order)")
 
         await db.commit()
         await db.refresh(edge)
@@ -297,6 +374,8 @@ async def get_route_graph_service(db: AsyncSession, current_user: CurrentUser, r
             is_start=incoming[node.id] == 0,
             is_terminal=outgoing[node.id] == 0,
             level=level_by_node.get(node.id, 0),
+            approver_role_name=(node.approver.profile.role.name if node.approver and node.approver.profile and node.approver.profile.role else None),
+            approver_unit_name=(node.approver.profile.unit.name if node.approver and node.approver.profile and node.approver.profile.unit else None),
         )
         for node in nodes
     ]

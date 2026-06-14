@@ -32,18 +32,66 @@ async def create_role_service(db: AsyncSession, current_user: CurrentUser, paylo
     name = payload.name.strip()
     if not name:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Role name is required")
+    lower_name = name.lower()
 
     if await DictionariesRepository.role_name_exists(cast(UUID, current_user.company_id), name, db):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Role already exists")
 
     try:
-        role = await DictionariesRepository.create_role(
-            Role(name=name, company_id=current_user.company_id),
-            db,
+        # director should get level=100 automatically
+        director_names = {"директор", "director"}
+        # special fixed roles (admin / clerk) should get level=90 and sort_order=1
+        admin_names = {"администратор", "делопроизводитель", "administrator", "clerk"}
+
+        level_payload = getattr(payload, "level", None)
+
+        if lower_name in director_names:
+            # ensure only one director per company
+            if await DictionariesRepository.role_with_level_exists(cast(UUID, current_user.company_id), 100, db):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Director already exists for this company")
+            level = 100
+            sort_order = await DictionariesRepository.next_sort_order(cast(UUID, current_user.company_id), level, db)
+        elif lower_name in admin_names:
+            level = 90
+            sort_order = 1
+        else:
+            if level_payload is None:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Role level is required")
+            if level_payload > 100:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Role level must be <= 100")
+            level = level_payload
+            sort_order = await DictionariesRepository.next_sort_order(cast(UUID, current_user.company_id), level, db)
+
+        unit_id = getattr(payload, "unit_id", None)
+        role = Role(
+            name=name,
+            company_id=current_user.company_id,
+            level=level,
+            sort_order=sort_order,
+            unit_id=unit_id,
         )
+
+        created = await DictionariesRepository.create_role(role, db)
+
+        # ensure returned object has level/sort_order/unit_id for DTO validation
+        if not hasattr(created, "level"):
+            setattr(created, "level", level)
+        if not hasattr(created, "sort_order"):
+            setattr(created, "sort_order", sort_order)
+        if not hasattr(created, "unit_id") and unit_id is not None:
+            setattr(created, "unit_id", unit_id)
+
+        # attach categories if provided
+        category_ids = getattr(payload, "category_ids", None)
+        if category_ids:
+            await DictionariesRepository.add_role_categories(category_ids, created.id, db)
+
         await db.commit()
-        await db.refresh(role)
-        return RoleReadDTO.model_validate(role)
+        await db.refresh(created)
+        return RoleReadDTO.model_validate(created)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Role conflict (unique constraint)")
     except SQLAlchemyError as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail="Database error while creating role") from e
@@ -63,6 +111,39 @@ async def update_role_service(db: AsyncSession, current_user: CurrentUser, role_
         if await DictionariesRepository.role_name_exists(cast(UUID, current_user.company_id), name, db):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Role already exists")
         role.name = name
+
+        # if renamed to director, enforce level=100 and uniqueness
+        lower_name = name.lower()
+        director_names = {"директор", "director"}
+        if lower_name in director_names:
+            if await DictionariesRepository.role_with_level_exists(cast(UUID, current_user.company_id), 100, db, exclude_role_id=role.id):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Director already exists for this company")
+            if role.level != 100:
+                role.sort_order = await DictionariesRepository.next_sort_order(cast(UUID, current_user.company_id), 100, db)
+            role.level = 100
+
+    if payload.level is not None:
+        # validate maximum level
+        if payload.level > 100:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Role level must be <= 100")
+        # if assigning level 100, ensure uniqueness
+        if payload.level == 100 and await DictionariesRepository.role_with_level_exists(cast(UUID, current_user.company_id), 100, db, exclude_role_id=role.id):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Director already exists for this company")
+        # if level changed, assign next available sort_order in the new level
+        if payload.level != role.level:
+            role.sort_order = await DictionariesRepository.next_sort_order(cast(UUID, current_user.company_id), payload.level, db)
+        role.level = payload.level
+
+    if payload.unit_id is not None:
+        role.unit_id = payload.unit_id
+
+    if payload.category_ids is not None:
+        # replace categories: delete existing and add new
+        existing = await DictionariesRepository.get_role_categories(role.id, db)
+        if existing:
+            await DictionariesRepository.delete_role_categories(existing, db)
+        if payload.category_ids:
+            await DictionariesRepository.add_role_categories(payload.category_ids, role.id, db)
 
     try:
         await db.commit()

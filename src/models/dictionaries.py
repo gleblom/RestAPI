@@ -7,17 +7,25 @@ from src.database import Base
 
 class Role(Base):
     __tablename__ = "roles"
+    __table_args__ = (
+        UniqueConstraint("company_id", "name"),
+        UniqueConstraint("company_id", "level", "sort_order"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     company_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=True)
+    level: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    unit_id: Mapped[int] = mapped_column(Integer, ForeignKey("units.id", ondelete="SET NULL"), nullable=True)
 
     profiles = relationship("Profile", back_populates="role")
     role_categories = relationship("RoleCategory", back_populates="role", cascade="all, delete-orphan")
     company = relationship("Company", back_populates="roles")
+    unit = relationship("Unit", back_populates="roles")
     
     def __repr__(self): 
-        return f"<Role(id={self.id}, name={self.name})>"
+        return f"<Role(id={self.id}, name={self.name}, level={self.level}, sort_order={self.sort_order})>"
     
 class RoleCategory(Base):
     __tablename__ = "role_categories"
@@ -78,6 +86,7 @@ class Unit(Base):
     profiles = relationship("Profile", back_populates="unit")
     unit_companies = relationship("UnitCompany", back_populates="unit")
     document_units = relationship("DocumentUnit", back_populates="unit")
+    roles = relationship("Role", back_populates="unit")
     
     def __repr__(self):
         return f"<Unit(id={self.id}, name={self.name})>"

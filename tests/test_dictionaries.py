@@ -10,12 +10,14 @@ import src.services.dictionaries_service as ds
 @pytest.mark.asyncio
 async def test_create_role_success(monkeypatch):
     company_id = uuid4()
-    payload = SimpleNamespace(name="NewRole")
+    payload = SimpleNamespace(name="NewRole", level=1)
     current_user = SimpleNamespace(company_id=company_id)
     mock_role = SimpleNamespace(id=1, name="NewRole", company_id=company_id)
 
     monkeypatch.setattr(ds.DictionariesRepository, "role_name_exists", AsyncMock(return_value=False))
     monkeypatch.setattr(ds.DictionariesRepository, "create_role", AsyncMock(return_value=mock_role))
+    monkeypatch.setattr(ds.DictionariesRepository, "next_sort_order", AsyncMock(return_value=1))
+    monkeypatch.setattr(ds.DictionariesRepository, "role_with_level_exists", AsyncMock(return_value=False))
 
     db = SimpleNamespace(commit=AsyncMock(), refresh=AsyncMock())
 
@@ -25,7 +27,7 @@ async def test_create_role_success(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_create_role_empty_name():
-    payload = SimpleNamespace(name="   ")
+    payload = SimpleNamespace(name="   ", level=1)
     current_user = SimpleNamespace(company_id=uuid4())
     db = SimpleNamespace()
 
@@ -36,7 +38,7 @@ async def test_create_role_empty_name():
 
 @pytest.mark.asyncio
 async def test_create_role_duplicate_name(monkeypatch):
-    payload = SimpleNamespace(name="Dup")
+    payload = SimpleNamespace(name="Dup", level=1)
     current_user = SimpleNamespace(company_id=uuid4())
     monkeypatch.setattr(ds.DictionariesRepository, "role_name_exists", AsyncMock(return_value=True))
     db = SimpleNamespace()
