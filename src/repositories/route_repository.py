@@ -98,9 +98,10 @@ class RouteRepository:
                         selectinload(ApprovalRoute.nodes)
                         .selectinload(RouteNode.approver)
                         .selectinload(User.profile)
-                        .selectinload(Profile.role)
-                        .selectinload(Profile.unit),
-                        selectinload(ApprovalRoute.edges)))
+                        .options(selectinload(Profile.role), selectinload(Profile.unit)),
+                        selectinload(ApprovalRoute.edges)
+                        )
+                    )
         
         return result.scalar_one_or_none()
 
