@@ -8,6 +8,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.security import CurrentUser
 from src.models.approval_routes import ApprovalRoute, RouteEdge, RouteNode
 from src.repositories.route_repository import RouteRepository
 from src.repositories.profile_repository import ProfileRepository
@@ -22,7 +23,6 @@ from src.schemas.routes import (
     RouteNodeCreateDTO,
     RouteNodeUpdateDTO,
 )
-from src.security import CurrentUser
 
 
 def _ensure_same_company(route_company_id: UUID, current_company_id: UUID) -> None:
@@ -219,6 +219,29 @@ async def update_node_service(
                 if existing_role.level == profile.role.level and existing_role.sort_order == profile.role.sort_order:
                     raise HTTPException(status_code=409, detail="A role with this level and order already exists in the route")
 
+        # validate role ordering relative to connected edges (incoming must be lower, outgoing must be higher)
+        node_by_id = {n.id: n for n in route.nodes}
+        for e in route.edges:
+            # incoming edge: e.from_node -> node
+            if e.to_node_id == node.id:
+                prev_node = node_by_id.get(e.from_node_id)
+                if not prev_node or not prev_node.approver or not prev_node.approver.profile or not prev_node.approver.profile.role:
+                    raise HTTPException(status_code=400, detail="Invalid route nodes")
+                prev_role = prev_node.approver.profile.role
+                new_role = profile.role
+                if new_role.level < prev_role.level or (new_role.level == prev_role.level and new_role.sort_order <= prev_role.sort_order):
+                    raise HTTPException(status_code=400, detail="Approver order must go from lower to higher (by level then sort_order)")
+
+            # outgoing edge: node -> e.to_node
+            if e.from_node_id == node.id:
+                next_node = node_by_id.get(e.to_node_id)
+                if not next_node or not next_node.approver or not next_node.approver.profile or not next_node.approver.profile.role:
+                    raise HTTPException(status_code=400, detail="Invalid route nodes")
+                next_role = next_node.approver.profile.role
+                new_role = profile.role
+                if next_role.level < new_role.level or (next_role.level == new_role.level and next_role.sort_order <= new_role.sort_order):
+                    raise HTTPException(status_code=400, detail="Approver order must go from lower to higher (by level then sort_order)")
+
         node.approver_id = payload.approver_id  # type: ignore
 
     try:
@@ -268,13 +291,11 @@ async def add_edge_service(db: AsyncSession, current_user: CurrentUser, route_id
         raise HTTPException(status_code=409, detail="Edge already exists")
 
     try:
-        edge = await RouteRepository.create_edge(
-            RouteEdge(route_id=route_id, from_node_id=from_node.id, to_node_id=to_node.id),
-            db,
-        )
+        # build a transient edge object and run validations before persisting
+        new_edge = RouteEdge(route_id=route_id, from_node_id=from_node.id, to_node_id=to_node.id)
 
         nodes = route.nodes
-        edges = route.edges + [edge]
+        edges = route.edges + [new_edge]
         _validate_acyclic(nodes, edges)
 
         # validate sequential chain: indegree/outdegree must be <=1 and route must be a single linear chain
@@ -308,10 +329,13 @@ async def add_edge_service(db: AsyncSession, current_user: CurrentUser, route_id
             if role_b.level < role_a.level or (role_b.level == role_a.level and role_b.sort_order <= role_a.sort_order):
                 raise HTTPException(status_code=400, detail="Approver order must go from lower to higher (by level then sort_order)")
 
+        # persist the edge after all checks passed
+        edge = await RouteRepository.create_edge(new_edge, db)
         await db.commit()
         await db.refresh(edge)
         return edge
     except HTTPException:
+        # nothing persisted here except possible earlier DB state; ensure rollback for safety
         await db.rollback()
         raise
     except SQLAlchemyError as e:
