@@ -22,7 +22,11 @@ from src.schemas.routes import (
     RouteGraphNodeDTO,
     RouteNodeCreateDTO,
     RouteNodeUpdateDTO,
+    ApprovalRouteWithGraphCreateDTO,
+    RouteEdgeByStepCreateDTO,
 )
+from types import SimpleNamespace
+from src.security import CurrentUser
 
 
 def _ensure_same_company(route_company_id: UUID, current_company_id: UUID) -> None:
@@ -84,6 +88,113 @@ async def create_route_service(db: AsyncSession, current_user: CurrentUser, payl
     except SQLAlchemyError as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail="Database error while creating route") from e
+
+
+async def create_route_with_graph_service(
+    db: AsyncSession,
+    current_user: CurrentUser,
+    payload: ApprovalRouteWithGraphCreateDTO,
+):
+    # basic validations
+    if not payload.name or not payload.name.strip():
+        raise HTTPException(status_code=400, detail="Route name is required")
+
+    if not payload.nodes or len(payload.nodes) < 2:
+        raise HTTPException(status_code=400, detail="Route must contain at least 2 steps")
+
+    # unique step_index and approver checks
+    seen_steps = set()
+    seen_approvers = set()
+    for n in payload.nodes:
+        if n.step_index in seen_steps:
+            raise HTTPException(status_code=409, detail="Step index already exists in this route")
+        seen_steps.add(n.step_index)
+        if n.approver_id in seen_approvers:
+            raise HTTPException(status_code=409, detail="Approver already exists in this route")
+        seen_approvers.add(n.approver_id)
+
+    # Load and validate profiles/roles for nodes
+    profiles_by_step: dict[int, object] = {}
+    for n in payload.nodes:
+        profile = await ProfileRepository.get_profile(n.approver_id, db)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Approver not found")
+        if profile.company_id != current_user.company_id:
+            raise HTTPException(status_code=403, detail="Approver must belong to the same company as the route")
+        if not profile.role:
+            raise HTTPException(status_code=400, detail="Approver must have a role with level/sort_order")
+        if profile.role.level == 90 and profile.role.sort_order == 1:
+            raise HTTPException(status_code=400, detail="This role cannot be assigned to approval steps")
+        profiles_by_step[n.step_index] = profile
+
+    # disallow duplicate positions (level+sort_order)
+    seen_positions = set()
+    for step, profile in profiles_by_step.items():
+        pos = (profile.role.level, profile.role.sort_order)
+        if pos in seen_positions:
+            raise HTTPException(status_code=409, detail="A role with this level and order already exists in the route")
+        seen_positions.add(pos)
+
+    # validate edges reference existing steps and no self-loops
+    if not payload.edges:
+        raise HTTPException(status_code=400, detail="Route must contain at least 1 edge")
+
+    temp_nodes = [SimpleNamespace(id=s) for s in profiles_by_step.keys()]
+    temp_edges = []
+    for e in payload.edges:
+        if e.from_step_index not in profiles_by_step or e.to_step_index not in profiles_by_step:
+            raise HTTPException(status_code=404, detail="Route node not found")
+        if e.from_step_index == e.to_step_index:
+            raise HTTPException(status_code=400, detail="Self-loop is not allowed")
+        temp_edges.append(SimpleNamespace(from_node_id=e.from_step_index, to_node_id=e.to_step_index))
+
+    # acyclic check
+    _validate_acyclic(temp_nodes, temp_edges)
+
+    # sequential chain: indegree/outdegree must be <=1
+    incoming = defaultdict(int)
+    outgoing = defaultdict(int)
+    for e in temp_edges:
+        outgoing[e.from_node_id] += 1
+        incoming[e.to_node_id] += 1
+
+    for s in profiles_by_step.keys():
+        if incoming[s] > 1 or outgoing[s] > 1:
+            raise HTTPException(status_code=400, detail="Route must be strictly sequential (no branching allowed)")
+
+    # role ordering per edge
+    for e in temp_edges:
+        ra = profiles_by_step[e.from_node_id].role
+        rb = profiles_by_step[e.to_node_id].role
+        if rb.level < ra.level or (rb.level == ra.level and rb.sort_order <= ra.sort_order):
+            raise HTTPException(status_code=400, detail="Approver order must go from lower to higher (by level then sort_order)")
+
+    # persist all in a single transaction
+    try:
+        async with db.begin():
+            route = ApprovalRoute(name=payload.name.strip(), created_by=current_user.user_id, company_id=current_user.company_id)
+            route = await RouteRepository.create_route(route, db)
+
+            # create nodes and map step_index -> node
+            node_map: dict[int, RouteNode] = {}
+            for n in payload.nodes:
+                node = RouteNode(route_id=route.id, approver_id=n.approver_id, step_index=n.step_index)
+                node = await RouteRepository.create_node(node, db)
+                node_map[n.step_index] = node
+
+            # create edges using created node ids
+            for e in payload.edges:
+                from_node = node_map[e.from_step_index]
+                to_node = node_map[e.to_step_index]
+                edge = RouteEdge(route_id=route.id, from_node_id=from_node.id, to_node_id=to_node.id)
+                await RouteRepository.create_edge(edge, db)
+
+        # transaction committed, fetch route graph and return
+        return await get_route_graph_service(db, current_user, route.id)
+    except HTTPException:
+        raise
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail="Database error while creating route with graph") from e
 
 
 async def list_routes_service(db: AsyncSession, current_user: CurrentUser):

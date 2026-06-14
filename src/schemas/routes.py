@@ -82,3 +82,14 @@ class RouteGraphDTO(BaseModel): # @IgnoreException
     nodes: list[RouteGraphNodeDTO]
     edges: list[RouteGraphEdgeDTO]
     levels: list[list[int]]
+
+
+class RouteEdgeByStepCreateDTO(BaseModel):
+    from_step_index: int
+    to_step_index: int
+
+
+class ApprovalRouteWithGraphCreateDTO(BaseModel):
+    name: str
+    nodes: list[RouteNodeCreateDTO]
+    edges: list[RouteEdgeByStepCreateDTO]

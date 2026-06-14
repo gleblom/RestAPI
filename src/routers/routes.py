@@ -8,6 +8,7 @@ from src.schemas.routes import (
     ApprovalRouteCreateDTO,
     ApprovalRouteReadDTO,
     ApprovalRouteUpdateDTO,
+    ApprovalRouteWithGraphCreateDTO,
     RouteEdgeCreateDTO,
     RouteEdgeReadDTO,
     RouteGraphDTO,
@@ -20,6 +21,7 @@ from src.services.route_service import (
     add_edge_service,
     add_node_service,
     create_route_service,
+    create_route_with_graph_service,
     delete_edge_service,
     delete_node_service,
     delete_route_service,
@@ -40,6 +42,15 @@ async def create_route(
     current_user: CurrentUser,
 ):
     return await create_route_service(db, current_user, payload)
+
+
+@router.post("/with-graph", response_model=RouteGraphDTO, status_code=status.HTTP_201_CREATED)
+async def create_route_with_graph(
+    payload: ApprovalRouteWithGraphCreateDTO,
+    db: Annotated[AsyncSession, Depends(get_session)],
+    current_user: CurrentUser,
+):
+    return await create_route_with_graph_service(db, current_user, payload)
 
 
 @router.get("", response_model=list[ApprovalRouteReadDTO])
