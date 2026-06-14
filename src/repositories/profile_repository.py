@@ -4,6 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.schemas.users import ProfileDTO
 from src.models.users import Profile
@@ -25,7 +26,7 @@ class ProfileRepository:
         return result.scalar_one_or_none()
     @staticmethod
     async def get_profile(user_id: UUID, db: AsyncSession) -> Profile | None:
-        result = await db.execute(select(Profile).where(Profile.id == user_id))
+        result = await db.execute(select(Profile).options(selectinload(Profile.role)).where(Profile.id == user_id))
         return result.scalar_one_or_none()
 
     
