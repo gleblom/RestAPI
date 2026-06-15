@@ -171,29 +171,33 @@ async def create_route_with_graph_service(
 
     # persist all in a single transaction
     try:
-        async with db.begin():
-            route = ApprovalRoute(name=payload.name.strip(), created_by=current_user.user_id, company_id=current_user.company_id)
-            route = await RouteRepository.create_route(route, db)
+        route = ApprovalRoute(name=payload.name.strip(), created_by=current_user.user_id, company_id=current_user.company_id)
+        route = await RouteRepository.create_route(route, db)
 
-            # create nodes and map step_index -> node
-            node_map: dict[int, RouteNode] = {}
-            for n in payload.nodes:
-                node = RouteNode(route_id=route.id, approver_id=n.approver_id, step_index=n.step_index)
-                node = await RouteRepository.create_node(node, db)
-                node_map[n.step_index] = node
+        # create nodes and map step_index -> node
+        node_map: dict[int, RouteNode] = {}
+        for n in payload.nodes:
+            node = RouteNode(route_id=route.id, approver_id=n.approver_id, step_index=n.step_index)
+            node = await RouteRepository.create_node(node, db)
+            node_map[n.step_index] = node
 
-            # create edges using created node ids
-            for e in payload.edges:
-                from_node = node_map[e.from_step_index]
-                to_node = node_map[e.to_step_index]
-                edge = RouteEdge(route_id=route.id, from_node_id=from_node.id, to_node_id=to_node.id)
-                await RouteRepository.create_edge(edge, db)
+        # create edges using created node ids
+        for e in payload.edges:
+            from_node = node_map[e.from_step_index]
+            to_node = node_map[e.to_step_index]
+            edge = RouteEdge(route_id=route.id, from_node_id=from_node.id, to_node_id=to_node.id)
+            await RouteRepository.create_edge(edge, db)
+
+        # commit all changes
+        await db.commit()
 
         # transaction committed, fetch route graph and return
         return await get_route_graph_service(db, current_user, route.id)
     except HTTPException:
+        await db.rollback()
         raise
     except SQLAlchemyError as e:
+        await db.rollback()
         raise HTTPException(status_code=500, detail="Database error while creating route with graph") from e
 
 
