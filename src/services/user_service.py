@@ -48,7 +48,6 @@ async def add_user_service(db: Annotated[AsyncSession, Depends(get_session)], em
         phone = phone,
         otp_enabled = False,
         otp_verified = False,
-        passkey_enabled = False
     )
     
     try:
