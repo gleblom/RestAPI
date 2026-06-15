@@ -58,6 +58,8 @@ class MVDocumentApproval(Base):
 
     approver_id: Mapped[UUID] = mapped_column(UUID(as_uuid=True))
     approver_full_name : Mapped[str] = mapped_column(String)
+    
+    comment: Mapped[str] = mapped_column(String)
 
     step_index: Mapped[int] = mapped_column(Integer)
     is_approved: Mapped[bool] = mapped_column(Boolean)
