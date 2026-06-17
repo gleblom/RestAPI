@@ -236,6 +236,10 @@ async def delete_route_service(db: AsyncSession, current_user: CurrentUser, rout
         raise HTTPException(status_code=404, detail="Route not found")
     _ensure_same_company(cast(UUID, route.company_id), cast(UUID,current_user.company_id))
 
+    # do not allow deletion if route is in use by any documents
+    if await RouteRepository.route_in_use(route.id, db):
+        raise HTTPException(status_code=409, detail="Route is assigned to documents and cannot be deleted")
+
     try:
         await RouteRepository.delete_route(route, db)
         await db.commit()

@@ -59,3 +59,29 @@ async def test_get_route_graph_service_cycle_detected(monkeypatch):
     db = SimpleNamespace()
     with pytest.raises(Exception):
         await rs.get_route_graph_service(db, current_user, 1)
+
+
+@pytest.mark.asyncio
+async def test_delete_route_in_use(monkeypatch):
+    route = SimpleNamespace(id=1, company_id=uuid4())
+    monkeypatch.setattr(rs.RouteRepository, 'get_route', AsyncMock(return_value=route))
+    monkeypatch.setattr(rs.RouteRepository, 'route_in_use', AsyncMock(return_value=True))
+    current_user = SimpleNamespace(company_id=route.company_id)
+    db = SimpleNamespace()
+    with pytest.raises(HTTPException) as ex:
+        await rs.delete_route_service(db, current_user, 1)
+    assert ex.value.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_delete_route_not_in_use(monkeypatch):
+    route = SimpleNamespace(id=1, company_id=uuid4())
+    monkeypatch.setattr(rs.RouteRepository, 'get_route', AsyncMock(return_value=route))
+    monkeypatch.setattr(rs.RouteRepository, 'route_in_use', AsyncMock(return_value=False))
+    monkeypatch.setattr(rs.RouteRepository, 'delete_route', AsyncMock())
+    current_user = SimpleNamespace(company_id=route.company_id)
+    db = SimpleNamespace()
+    db.commit = AsyncMock()
+    db.rollback = AsyncMock()
+    res = await rs.delete_route_service(db, current_user, 1)
+    assert res == {"detail": "Route deleted"}

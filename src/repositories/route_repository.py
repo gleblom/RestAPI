@@ -4,6 +4,7 @@ from sqlalchemy.orm import selectinload
 
 from src.models.users import User, Profile
 from src.models.approval_routes import ApprovalRoute, RouteEdge, RouteNode
+from src.models.documents import Document
 
 class RouteRepository:
     
@@ -104,6 +105,13 @@ class RouteRepository:
                     )
         
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def route_in_use(route_id: int, db: AsyncSession) -> bool:
+        result = await db.execute(
+            select(Document.id).where(Document.route_id == route_id).limit(1)
+        )
+        return result.scalar_one_or_none() is not None
 
     @staticmethod
     async def get_route_node(route_id: int, step_index: int, db: AsyncSession) -> RouteNode | None:
